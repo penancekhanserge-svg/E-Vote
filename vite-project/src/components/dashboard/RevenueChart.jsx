@@ -22,7 +22,7 @@ const data = [
   { name: 'Hannah', votes: 40 },
 ];
 
-// COMPONENT 1: Voter Turnout Card
+// Voter Turnout Card
 function VoterTurnoutCard() {
   const totalVoters = 1000;
   const votesCast = 650;
@@ -37,7 +37,7 @@ function VoterTurnoutCard() {
   );
 }
 
-// COMPONENT 2: Election Progress Card
+// Election Progress Card
 function ElectionProgressCard() {
   const startDate = new Date('2025-07-20');
   const endDate = new Date('2025-07-30');
@@ -57,7 +57,7 @@ function ElectionProgressCard() {
   );
 }
 
-// MAIN CHART COMPONENT
+// Main Chart Component
 function RevenueChart() {
   const [selectedElection, setSelectedElection] = useState('presidential');
   const [showDropdown, setShowDropdown] = useState(false);
@@ -71,20 +71,20 @@ function RevenueChart() {
   ];
 
   return (
-    <div className='flex gap-4'>
-      {/* Main Chart Container */}
-      <div className='flex-1 p-4 rounded-2xl bg-white/80 dark:bg-slate-900/80 shadow-xl border border-slate-200 dark:border-slate-700 backdrop-blur-md hover:shadow-2xl hover:scale-[1.02] transition duration-300'>
-        <div className='flex items-center justify-between mb-4'>
+    <div className="flex flex-col lg:flex-row gap-4 lg:gap-6">
+      {/* Main Chart */}
+      <div className="flex-1 p-4 rounded-2xl bg-white/80 dark:bg-slate-900/80 shadow-xl border border-slate-200 dark:border-slate-700 backdrop-blur-md hover:shadow-2xl hover:scale-[1.02] transition duration-300">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-4 gap-4 sm:gap-0">
           <div>
-            <h3 className='text-xl font-bold text-slate-800 dark:text-white'>
+            <h3 className="text-xl font-bold text-slate-800 dark:text-white">
               Live Vote Count Overview
             </h3>
-            <p className='text-sm text-slate-500 dark:text-slate-400'>
+            <p className="text-sm text-slate-500 dark:text-slate-400">
               Real-Time insights into voting trends
             </p>
           </div>
-          <div className='flex items-center space-x-4'>
-            {/* Election Type Dropdown */}
+
+          <div className="flex items-center space-x-4">
             <div className="relative">
               <button
                 onClick={() => setShowDropdown(!showDropdown)}
@@ -93,7 +93,6 @@ function RevenueChart() {
                 <span>{electionTypes.find(e => e.value === selectedElection)?.label}</span>
                 <ChevronDown size={16} className={`transition-transform ${showDropdown ? 'rotate-180' : ''}`} />
               </button>
-              
               {showDropdown && (
                 <div className="absolute right-0 mt-2 w-56 bg-white rounded-lg shadow-lg border border-slate-200 z-10">
                   <div className="py-1">
@@ -116,18 +115,17 @@ function RevenueChart() {
               )}
             </div>
 
-            <div className='flex items-center space-x-2'>
-              <div className='w-6 h-6 rounded-full bg-gradient-to-tr from-blue-500 to-purple-600 flex items-center justify-center shadow-lg'>
-                <BarChart2 size={16} className='text-white' />
+            <div className="flex items-center space-x-2">
+              <div className="w-6 h-6 rounded-full bg-gradient-to-tr from-blue-500 to-purple-600 flex items-center justify-center shadow-lg">
+                <BarChart2 size={16} className="text-white" />
               </div>
-              <div className='text-sm text-slate-800 dark:text-slate-400'>
-                <span className='font-semibold'>Vote Count</span>
+              <div className="text-sm text-slate-800 dark:text-slate-400">
+                <span className="font-semibold">Vote Count</span>
               </div>
             </div>
           </div>
         </div>
 
-        {/* Chart Area */}
         <div className="h-60 bg-slate-100 dark:bg-slate-800 rounded-lg px-2 py-1">
           <ResponsiveContainer width="100%" height="100%">
             <BarChart
@@ -169,8 +167,8 @@ function RevenueChart() {
         </div>
       </div>
 
-      {/* Side Card with Voter Info */}
-      <div className='h-83 w-80 rounded-2xl bg-white shadow-xl p-4 ml-4 flex flex-col justify-between'>
+      {/* Side Card */}
+      <div className="flex flex-col lg:w-80 gap-4">
         <VoterTurnoutCard />
         <ElectionProgressCard />
       </div>

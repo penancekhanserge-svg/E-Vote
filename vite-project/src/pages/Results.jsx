@@ -1,7 +1,5 @@
 import React, { useRef, useState } from 'react';
-import { Trash2, UploadCloud, FileText, Printer } from 'lucide-react';
-import jsPDF from 'jspdf';
-import html2canvas from 'html2canvas';
+import { Trash2, UploadCloud, Printer } from 'lucide-react';
 
 // Realistic election names for dummy data (10 elections)
 const electionNames = [
@@ -47,16 +45,6 @@ export default function ResultsPage() {
     alert('Results Published Successfully!');
   };
 
-  const exportToPDF = async () => {
-    const canvas = await html2canvas(resultsRef.current);
-    const imgData = canvas.toDataURL('image/png');
-    const pdf = new jsPDF('p', 'mm', 'a4');
-    const pdfWidth = pdf.internal.pageSize.getWidth();
-    const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
-    pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
-    pdf.save('election_results.pdf');
-  };
-
   const handlePrint = () => {
     const printContent = resultsRef.current.innerHTML;
     const printWindow = window.open('', '', 'width=800,height=600');
@@ -76,6 +64,10 @@ export default function ResultsPage() {
               border: 1px solid #999;
               background-color: #eee;
               display: inline-block;
+            }
+            /* Hide status & action columns when printing */
+            @media print {
+              .no-print { display: none !important; }
             }
           </style>
         </head>
@@ -106,21 +98,15 @@ export default function ResultsPage() {
       <div className="flex flex-wrap justify-end gap-3">
         <button
           onClick={handlePublish}
-          className="flex items-center bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 transition"
+          className="flex items-center bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition"
         >
           <UploadCloud size={18} className="mr-2" /> Publish Results
         </button>
         <button
           onClick={handlePrint}
-          className="flex items-center bg-gray-700 text-white px-4 py-2 rounded-lg hover:bg-gray-800 transition"
+          className="flex items-center bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition"
         >
           <Printer size={18} className="mr-2" /> Print
-        </button>
-        <button
-          onClick={exportToPDF}
-          className="flex items-center bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition"
-        >
-          <FileText size={18} className="mr-2" /> Export PDF
         </button>
       </div>
 
@@ -143,8 +129,8 @@ export default function ResultsPage() {
                       <th className="px-4 py-2">Party</th>
                       <th className="px-4 py-2">Votes</th>
                       <th className="px-4 py-2">% of Total</th>
-                      <th className="px-4 py-2">Status</th>
-                      <th className="px-4 py-2">Action</th>
+                      <th className="px-4 py-2 no-print">Status</th>
+                      <th className="px-4 py-2 no-print">Action</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-200 dark:divide-slate-700">
@@ -161,20 +147,21 @@ export default function ResultsPage() {
                             <td className="px-4 py-2">{candidate.party}</td>
                             <td className="px-4 py-2">{candidate.votes}</td>
                             <td className="px-4 py-2">{percentage}%</td>
-                            <td className="px-4 py-2">
+                            <td className="px-4 py-2 no-print">
                               {candidate.winner ? (
                                 <span className="text-green-600 font-semibold">✅ Winner</span>
                               ) : (
                                 <span className="text-red-500">❌</span>
                               )}
                             </td>
-                            <td className="px-4 py-2">
+                            <td className="px-4 py-2 no-print">
                               <button
                                 onClick={() =>
                                   window.confirm(`Are you sure you want to delete ${candidate.name}'s result?`)
                                 }
+                                className="text-blue-600 hover:text-blue-800"
                               >
-                                <Trash2 className="w-5 h-5 text-red-600 hover:text-red-800" />
+                                <Trash2 className="w-5 h-5" />
                               </button>
                             </td>
                           </tr>
@@ -193,7 +180,7 @@ export default function ResultsPage() {
         <button
           onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
           disabled={currentPage === 1}
-          className="px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-white rounded hover:bg-gray-300 disabled:opacity-50"
+          className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50"
         >
           Previous
         </button>
@@ -203,7 +190,7 @@ export default function ResultsPage() {
         <button
           onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
           disabled={currentPage === totalPages}
-          className="px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-white rounded hover:bg-gray-300 disabled:opacity-50"
+          className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50"
         >
           Next
         </button>

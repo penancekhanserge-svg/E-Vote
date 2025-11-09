@@ -4,7 +4,6 @@ function Settings() {
   const [profile, setProfile] = useState({
     name: '',
     email: '',
-    phone: '',
   });
 
   const [passwords, setPasswords] = useState({
@@ -56,14 +55,6 @@ function Settings() {
             name="email"
             placeholder="Email Address"
             value={profile.email}
-            onChange={handleProfileChange}
-            className="w-full px-4 py-2 border rounded border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-900 text-gray-800 dark:text-white"
-          />
-          <input
-            type="tel"
-            name="phone"
-            placeholder="Phone Number"
-            value={profile.phone}
             onChange={handleProfileChange}
             className="w-full px-4 py-2 border rounded border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-900 text-gray-800 dark:text-white"
           />
