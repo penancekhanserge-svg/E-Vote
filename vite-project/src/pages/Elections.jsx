@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from "react";
 import {
   CalendarDays,
   CheckCircle,
@@ -7,98 +7,163 @@ import {
   Pencil,
   Trash2,
   Plus,
-  Printer,
   X,
-} from 'lucide-react';
+} from "lucide-react";
+import { supabase } from "../supabaseClient";
 
 export default function ElectionsPage() {
   const [isModalOpen, setModalOpen] = useState(false);
   const [editMode, setEditMode] = useState(false);
   const [editingIndex, setEditingIndex] = useState(null);
-  const [formData, setFormData] = useState({ type: '', startDate: '', endDate: '' });
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const [formData, setFormData] = useState({
+    electionTypeId: "",
+    startDate: "",
+    endDate: "",
+  });
+
+  const [elections, setElections] = useState([]);
+  const [availableTypes, setAvailableTypes] = useState([]);
+
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [electionToDelete, setElectionToDelete] = useState(null);
+  
+  // Loading state specifically for delete
+  const [isDeleting, setIsDeleting] = useState(false);
 
-  const [elections, setElections] = useState([
-    { id: 1, type: 'Presidential Election', startDate: '2025-07-20', endDate: '2025-07-30', status: 'Active' },
-    { id: 2, type: 'Parliamentary Election', startDate: '2025-08-05', endDate: '2025-08-10', status: 'Upcoming' },
-    { id: 3, type: 'Municipal Election', startDate: '2025-06-01', endDate: '2025-06-05', status: 'Completed' },
-  ]);
+  useEffect(() => {
+    fetchElections();
+    fetchAvailableElectionTypes();
+  }, []);
 
-  const totalElections = elections.length;
-  const activeElections = elections.filter(e => e.status === 'Active').length;
-  const upcomingElections = elections.filter(e => e.status === 'Upcoming').length;
-  const completedElections = elections.filter(e => e.status === 'Completed').length;
+  /* ───────────── FETCH ELECTIONS ───────────── */
+  const fetchElections = async () => {
+    const { data, error } = await supabase
+      .from("elections")
+      .select(`
+        id,
+        start_date,
+        end_date,
+        election_types (
+          id,
+          name
+        )
+      `)
+      .order("start_date", { ascending: false });
 
-  const handlePrint = () => {
-    const printContents = document.getElementById('election-table').cloneNode(true);
-    const ths = printContents.querySelectorAll('th');
-    const tds = printContents.querySelectorAll('td');
-    ths[4]?.remove(); // Remove Actions header
-    for (let i = 4; i < tds.length; i += 5) tds[i]?.remove(); // Remove each Actions cell
+    if (error) {
+      console.error("Elections error:", error);
+      return;
+    }
 
-    const printWindow = window.open('', '', 'width=900,height=700');
-    printWindow.document.write(`
-      <html>
-        <head>
-          <title>Registered Elections</title>
-          <style>
-            body { font-family: sans-serif; padding: 20px; }
-            table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-            th, td { padding: 10px; border: 1px solid #ccc; text-align: left; word-break: break-word; }
-            th { background: #f0f0f0; }
-            h2 { text-align: center; margin-bottom: 20px; }
-          </style>
-        </head>
-        <body>
-          <h2>Registered Elections</h2>
-          ${printContents.outerHTML}
-        </body>
-      </html>
-    `);
-    printWindow.document.close();
-    printWindow.print();
+    const today = new Date();
+
+    const formatted = data.map((e) => {
+      const start = new Date(e.start_date);
+      const end = new Date(e.end_date);
+
+      let status = "Upcoming";
+      if (today >= start && today <= end) status = "Active";
+      if (today > end) status = "Completed";
+
+      return {
+        id: e.id,
+        type: e.election_types.name,
+        electionTypeId: e.election_types.id,
+        startDate: e.start_date,
+        endDate: e.end_date,
+        status,
+      };
+    });
+
+    setElections(formatted);
   };
 
-  const StatCard = ({ icon, label, count, bgColor, hoverColor }) => (
-    <div className={`flex items-center space-x-3 sm:space-x-4 p-4 sm:p-6 rounded-2xl shadow-md transition cursor-pointer bg-white hover:shadow-lg w-full`}>
-      <div className="p-3 rounded-full bg-white shadow">{icon}</div>
-      <div>
-        <p className="text-xs sm:text-sm font-semibold text-gray-700 dark:text-gray-300">{label}</p>
-        <h3 className="text-lg sm:text-2xl font-bold text-gray-900 dark:text-white">{count}</h3>
-      </div>
-    </div>
-  );
+  /* ───────────── FETCH UNUSED ELECTION TYPES ───────────── */
+  const fetchAvailableElectionTypes = async () => {
+    const { data, error } = await supabase
+      .from("election_types")
+      .select(`id, name, elections ( id )`);
 
+    if (error) {
+      console.error("Types error:", error);
+      return;
+    }
+
+    const unused = data.filter(
+      (t) => !t.elections || t.elections.length === 0
+    );
+
+    setAvailableTypes(unused);
+  };
+
+  /* ───────────── STATS ───────────── */
+  const totalElections = elections.length;
+  const activeElections = elections.filter((e) => e.status === "Active").length;
+  const upcomingElections = elections.filter(
+    (e) => e.status === "Upcoming"
+  ).length;
+  const completedElections = elections.filter(
+    (e) => e.status === "Completed"
+  ).length;
+
+  /* ───────────── HANDLERS ───────────── */
   const openAddModal = () => {
-    setFormData({ type: '', startDate: '', endDate: '' });
+    setFormData({ electionTypeId: "", startDate: "", endDate: "" });
     setEditMode(false);
     setModalOpen(true);
   };
 
   const openEditModal = (index) => {
-    const election = elections[index];
-    setFormData({ type: election.type, startDate: election.startDate, endDate: election.endDate });
+    const e = elections[index];
+    setFormData({
+      electionTypeId: e.electionTypeId,
+      startDate: e.startDate,
+      endDate: e.endDate,
+    });
     setEditingIndex(index);
     setEditMode(true);
     setModalOpen(true);
   };
 
   const handleInputChange = (e) => {
-    setFormData(prev => ({ ...prev, [e.target.name]: e.target.value }));
+    setFormData((p) => ({ ...p, [e.target.name]: e.target.value }));
   };
 
-  const handleSubmit = () => {
-    if (editMode) {
-      const updated = [...elections];
-      updated[editingIndex] = { ...updated[editingIndex], ...formData };
-      setElections(updated);
-    } else {
-      const newElection = { id: elections.length + 1, ...formData, status: 'Upcoming' };
-      setElections(prev => [...prev, newElection]);
+  const handleSubmit = async () => {
+    const { electionTypeId, startDate, endDate } = formData;
+    if (!startDate || !endDate || (!editMode && !electionTypeId)) return;
+
+    setIsSubmitting(true);
+
+    try {
+      if (editMode) {
+        const election = elections[editingIndex];
+        await supabase
+          .from("elections")
+          .update({
+            start_date: startDate,
+            end_date: endDate,
+          })
+          .eq("id", election.id);
+      } else {
+        await supabase.from("elections").insert({
+          election_type_id: electionTypeId,
+          start_date: startDate,
+          end_date: endDate,
+        });
+      }
+
+      await fetchElections();
+      await fetchAvailableElectionTypes();
+      setModalOpen(false);
+    } catch (err) {
+      console.error(err);
+      alert("Failed to save election.");
+    } finally {
+      setIsSubmitting(false);
     }
-    setModalOpen(false);
-    setFormData({ type: '', startDate: '', endDate: '' });
   };
 
   const confirmDelete = (index) => {
@@ -106,117 +171,307 @@ export default function ElectionsPage() {
     setDeleteConfirmOpen(true);
   };
 
-  const handleDeleteConfirmed = () => {
-    const updated = [...elections];
-    updated.splice(electionToDelete, 1);
-    setElections(updated);
-    setDeleteConfirmOpen(false);
-    setElectionToDelete(null);
+  const handleDeleteConfirmed = async () => {
+    const election = elections[electionToDelete];
+    
+    // Start Deleting State
+    setIsDeleting(true);
+
+    try {
+      const { error } = await supabase
+        .from("elections")
+        .delete()
+        .eq("id", election.id);
+
+      if (error) {
+        throw error;
+      }
+
+      // Success path
+      await fetchElections();
+      await fetchAvailableElectionTypes();
+      setDeleteConfirmOpen(false);
+    } catch (error) {
+      console.error("Delete error:", error);
+      alert("Could not delete election. It might have associated votes.");
+    } finally {
+      // Stop Deleting State regardless of success or failure
+      setIsDeleting(false);
+    }
   };
 
-  return (
-    <div className="max-w-6xl mx-auto space-y-6 sm:space-y-8 pb-10 px-2 sm:px-4 lg:px-6">
-      {/* Title */}
+  /* ───────────── UI ───────────── */
+  const StatCard = ({ icon, label, count }) => (
+    <div className="flex items-center space-x-4 p-4 sm:p-6 rounded-2xl bg-white shadow hover:shadow-md transition border border-slate-100 dark:border-slate-700">
+      <div className="w-10 h-10 sm:w-11 sm:h-11 flex items-center justify-center bg-indigo-50 text-indigo-600 rounded-xl shrink-0">
+        {icon}
+      </div>
       <div>
-        <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white">Elections Management</h1>
-        <p className="text-gray-600 dark:text-gray-400 text-sm sm:text-base mt-1">Manage and monitor all elections efficiently</p>
+        <p className="text-xs sm:text-sm text-gray-500 font-medium">{label}</p>
+        <h3 className="text-xl sm:text-2xl font-semibold">{count}</h3>
+      </div>
+    </div>
+  );
+
+  return (
+    <div className="max-w-7xl mx-auto space-y-6 sm:space-y-8 pb-10 px-4 sm:px-6">
+      <h1 className="text-2xl sm:text-3xl font-bold text-gray-800 dark:text-white">
+        Elections Management
+      </h1>
+
+      {/* Stats Grid */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 sm:gap-6">
+        <StatCard icon={<ListChecks />} label="Total Elections" count={totalElections} />
+        <StatCard icon={<CheckCircle />} label="Active Elections" count={activeElections} />
+        <StatCard icon={<Clock />} label="Upcoming Elections" count={upcomingElections} />
+        <StatCard icon={<CalendarDays />} label="Completed Elections" count={completedElections} />
       </div>
 
-      {/* Stat Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 sm:gap-6">
-        <StatCard icon={<ListChecks className="w-6 sm:w-7 h-6 sm:h-7 text-purple-600" />} label="Total Elections" count={totalElections} />
-        <StatCard icon={<CheckCircle className="w-6 sm:w-7 h-6 sm:h-7 text-green-600" />} label="Active Elections" count={activeElections} />
-        <StatCard icon={<Clock className="w-6 sm:w-7 h-6 sm:h-7 text-yellow-600" />} label="Upcoming Elections" count={upcomingElections} />
-        <StatCard icon={<CalendarDays className="w-6 sm:w-7 h-6 sm:h-7 text-gray-600" />} label="Completed Elections" count={completedElections} />
-      </div>
-
-      {/* Table Section */}
-      <div className="bg-white rounded-xl shadow-md p-3 sm:p-6 overflow-x-auto">
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-3 gap-2 sm:gap-3">
-          <h2 className="text-lg sm:text-xl font-bold text-gray-800">Elections Table</h2>
-          <div className="flex flex-wrap gap-2 sm:gap-3">
-            <button
-              className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 transition text-sm w-full sm:w-auto justify-center"
-              onClick={openAddModal}
-            >
-              <Plus size={16} /> Add Election
-            </button>
-            <button
-              onClick={handlePrint}
-              className="flex items-center gap-2 px-4 py-2 bg-white text-blue-600 rounded-xl shadow border border-gray-300 hover:bg-blue-600 hover:text-white transition text-sm w-full sm:w-auto justify-center"
-            >
-              <Printer size={16} /> Print List
-            </button>
-          </div>
+      {/* MAIN CARD */}
+      <div className="bg-white rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden">
+        {/* Header */}
+        <div className="p-4 sm:p-6 border-b border-slate-200 dark:border-slate-700 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+          <h2 className="text-lg sm:text-xl font-bold text-gray-800 dark:text-white">
+            Elections List
+          </h2>
+          <button
+            onClick={openAddModal}
+            className="w-full sm:w-auto bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-xl flex items-center justify-center gap-2 transition-colors shadow-sm"
+          >
+            <Plus size={18} /> Add Election
+          </button>
         </div>
 
-        <table id="election-table" className="min-w-[600px] sm:min-w-full text-sm text-left border border-gray-200">
-          <thead className="bg-gray-100 text-gray-700 font-semibold">
-            <tr>
-              <th className="px-3 sm:px-4 py-2">Election Type</th>
-              <th className="px-3 sm:px-4 py-2">Start Date</th>
-              <th className="px-3 sm:px-4 py-2">End Date</th>
-              <th className="px-3 sm:px-4 py-2">Status</th>
-              <th className="px-3 sm:px-4 py-2 print:hidden">Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {elections.map((e, idx) => (
-              <tr key={e.id} className="bg-white">
-                <td className="px-3 sm:px-4 py-2 break-words">{e.type}</td>
-                <td className="px-3 sm:px-4 py-2">{e.startDate}</td>
-                <td className="px-3 sm:px-4 py-2">{e.endDate}</td>
-                <td className="px-3 sm:px-4 py-2">
-                  <span className={`inline-block px-2 py-1 rounded-full text-xs sm:text-sm font-semibold ${
-                    e.status === 'Active' ? 'bg-green-100 text-green-700'
-                      : e.status === 'Upcoming' ? 'bg-yellow-100 text-yellow-700'
-                      : 'bg-slate-100 text-slate-700'
-                  }`}>
-                    {e.status}
-                  </span>
-                </td>
-                <td className="px-3 sm:px-4 py-2 flex space-x-2 print:hidden">
-                  <button onClick={() => openEditModal(idx)} className="text-blue-600 hover:text-blue-800"><Pencil size={16} /></button>
-                  <button onClick={() => confirmDelete(idx)} className="text-red-600 hover:text-red-800"><Trash2 size={16} /></button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+        {/* Empty State */}
+        {elections.length === 0 ? (
+          <div className="p-12 text-center text-gray-500">
+            No elections found. Create one to get started.
+          </div>
+        ) : (
+          <>
+            {/* 📱 MOBILE CARD VIEW (Visible only on small screens) */}
+            <div className="block sm:hidden p-4 space-y-4">
+              {elections.map((e, idx) => (
+                <div key={e.id} className="border border-slate-200 rounded-xl p-4 bg-white dark:bg-slate-800 dark:border-slate-700">
+                  <div className="flex justify-between items-start mb-3">
+                    <div>
+                      <h3 className="font-bold text-gray-900 dark:text-white">{e.type}</h3>
+                      <span className={`inline-block mt-1 px-2 py-0.5 rounded-full text-xs font-semibold ${
+                          e.status === "Active"
+                            ? "bg-green-100 text-green-700"
+                            : e.status === "Completed"
+                            ? "bg-gray-100 text-gray-700"
+                            : "bg-blue-100 text-blue-700"
+                        }`}>
+                        {e.status}
+                      </span>
+                    </div>
+                  </div>
+                  
+                  <div className="grid grid-cols-2 gap-2 text-sm text-gray-600 dark:text-gray-400 mb-3">
+                    <div>
+                      <span className="block text-xs uppercase text-gray-400">Start</span>
+                      {e.startDate}
+                    </div>
+                    <div>
+                      <span className="block text-xs uppercase text-gray-400">End</span>
+                      {e.endDate}
+                    </div>
+                  </div>
+
+                  <div className="flex justify-end gap-3 pt-2 border-t border-slate-100 dark:border-slate-700">
+                    <button onClick={() => openEditModal(idx)} className="text-blue-600 p-1">
+                      <Pencil size={18} />
+                    </button>
+                    <button onClick={() => confirmDelete(idx)} className="text-red-600 p-1">
+                      <Trash2 size={18} />
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* 🖥️ DESKTOP TABLE VIEW (Hidden on mobile) */}
+            <div className="hidden sm:block overflow-x-auto">
+              <table className="w-full text-sm sm:text-base">
+                <thead className="bg-slate-50 dark:bg-slate-800/50">
+                  <tr>
+                    <th className="px-4 sm:px-6 py-3 text-left font-semibold text-gray-700 dark:text-gray-300">Election Type</th>
+                    <th className="px-4 sm:px-6 py-3 text-left font-semibold text-gray-700 dark:text-gray-300">Start Date</th>
+                    <th className="px-4 sm:px-6 py-3 text-left font-semibold text-gray-700 dark:text-gray-300">End Date</th>
+                    <th className="px-4 sm:px-6 py-3 text-left font-semibold text-gray-700 dark:text-gray-300">Status</th>
+                    <th className="px-4 sm:px-6 py-3 text-left font-semibold text-gray-700 dark:text-gray-300">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100 dark:divide-slate-700">
+                  {elections.map((e, idx) => (
+                    <tr key={e.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
+                      <td className="px-4 sm:px-6 py-3 font-medium text-gray-800 dark:text-white">{e.type}</td>
+                      <td className="px-4 sm:px-6 py-3 text-gray-600 dark:text-gray-400">{e.startDate}</td>
+                      <td className="px-4 sm:px-6 py-3 text-gray-600 dark:text-gray-400">{e.endDate}</td>
+                      <td className="px-4 sm:px-6 py-3">
+                         <span className={`inline-block px-2 py-1 rounded-full text-xs font-semibold ${
+                          e.status === "Active"
+                            ? "bg-green-100 text-green-800"
+                            : e.status === "Completed"
+                            ? "bg-gray-100 text-gray-800"
+                            : "bg-blue-100 text-blue-800"
+                        }`}>
+                        {e.status}
+                      </span>
+                      </td>
+                      <td className="px-4 sm:px-6 py-3">
+                        <div className="flex items-center gap-3">
+                          <button onClick={() => openEditModal(idx)} className="text-blue-600 hover:text-blue-800 transition-colors">
+                            <Pencil size={18} />
+                          </button>
+                          <button onClick={() => confirmDelete(idx)} className="text-red-600 hover:text-red-800 transition-colors">
+                            <Trash2 size={18} />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </>
+        )}
       </div>
 
-      {/* Modals */}
+      {/* ADD/EDIT MODAL - REDESIGNED */}
       {isModalOpen && (
-        <div className="fixed inset-0 bg-black bg-opacity-30 flex justify-center items-center z-50 p-4 sm:p-6">
-          <div className="bg-white rounded-xl shadow-lg p-4 sm:p-6 w-full max-w-md sm:max-w-lg md:max-w-xl relative">
-            <button onClick={() => setModalOpen(false)} className="absolute top-4 right-4 text-gray-500 hover:text-gray-700"><X size={20} /></button>
-            <h3 className="text-lg sm:text-xl font-bold text-gray-800 mb-4">{editMode ? 'Edit Election' : 'Add New Election'}</h3>
-            <form className="space-y-3 sm:space-y-4">
-              <div>
-                <label className="block text-sm sm:text-base font-medium text-gray-700">Election Type</label>
-                <input type="text" name="type" value={formData.type} onChange={handleInputChange} className="w-full px-3 py-2 border border-gray-300 rounded-md mt-1" />
+        <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200">
+          <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl w-full max-w-lg relative flex flex-col max-h-[90vh] overflow-hidden">
+            
+            {/* HEADER */}
+            <div className="flex items-center justify-between px-6 sm:px-8 py-5 border-b border-slate-100 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800/50">
+              <h3 className="text-xl sm:text-2xl font-bold text-slate-800 dark:text-white">
+                {editMode ? "Edit Election" : "Create New Election"}
+              </h3>
+              <button
+                onClick={() => setModalOpen(false)}
+                className="p-2 rounded-full hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-500 dark:text-slate-400 transition-colors"
+              >
+                <X size={22} />
+              </button>
+            </div>
+
+            {/* BODY */}
+            <div className="p-6 sm:p-8 overflow-y-auto space-y-6">
+              
+              {/* Election Type Field */}
+              {!editMode && (
+                <div className="space-y-2">
+                  <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300">
+                    Election Type
+                  </label>
+                  <div className="relative">
+                    <select
+                      name="electionTypeId"
+                      value={formData.electionTypeId}
+                      onChange={handleInputChange}
+                      className="w-full appearance-none border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-950 text-slate-800 dark:text-slate-100 rounded-lg py-3 pl-4 pr-10 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-shadow shadow-sm"
+                    >
+                      <option value="">Select election type</option>
+                      {availableTypes.map((t) => (
+                        <option key={t.id} value={t.id}>
+                          {t.name}
+                        </option>
+                      ))}
+                    </select>
+                    {/* Custom Arrow Icon for Select */}
+                    <div className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-slate-500">
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                      </svg>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Date Fields */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                <div className="space-y-2">
+                  <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300">
+                    Start Date
+                  </label>
+                  <input
+                    type="date"
+                    name="startDate"
+                    value={formData.startDate}
+                    onChange={handleInputChange}
+                    className="w-full border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-950 text-slate-800 dark:text-slate-100 rounded-lg py-3 px-4 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-shadow shadow-sm"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300">
+                    End Date
+                  </label>
+                  <input
+                    type="date"
+                    name="endDate"
+                    value={formData.endDate}
+                    onChange={handleInputChange}
+                    className="w-full border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-950 text-slate-800 dark:text-slate-100 rounded-lg py-3 px-4 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-shadow shadow-sm"
+                  />
+                </div>
               </div>
-              <div>
-                <label className="block text-sm sm:text-base font-medium text-gray-700">Start Date</label>
-                <input type="date" name="startDate" value={formData.startDate} onChange={handleInputChange} className="w-full px-3 py-2 border border-gray-300 rounded-md mt-1" />
+
+              {/* Submit Button */}
+              <div className="pt-2">
+                <button
+                  onClick={handleSubmit}
+                  disabled={isSubmitting}
+                  className="w-full bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-400 text-white py-3.5 rounded-xl font-semibold transition-all duration-200 transform active:scale-[0.98] shadow-lg hover:shadow-xl flex items-center justify-center gap-2"
+                >
+                  {isSubmitting ? (
+                    <>
+                      <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-0 8 8 0 0118 0z"></path>
+                      </svg>
+                      <span>{editMode ? "Updating..." : "Creating..."}</span>
+                    </>
+                  ) : (
+                    <span>{editMode ? "Update Election" : "Create Election"}</span>
+                  )}
+                </button>
               </div>
-              <div>
-                <label className="block text-sm sm:text-base font-medium text-gray-700">End Date</label>
-                <input type="date" name="endDate" value={formData.endDate} onChange={handleInputChange} className="w-full px-3 py-2 border border-gray-300 rounded-md mt-1" />
-              </div>
-              <button type="button" onClick={handleSubmit} className="w-full bg-indigo-600 text-white py-2 rounded-md hover:bg-indigo-700 transition">{editMode ? 'Update Election' : 'Submit Election'}</button>
-            </form>
+            </div>
           </div>
         </div>
       )}
 
+      {/* DELETE CONFIRM MODAL */}
       {deleteConfirmOpen && (
-        <div className="fixed inset-0 bg-black bg-opacity-40 flex justify-center items-center z-50 p-4 sm:p-6">
-          <div className="bg-white p-6 rounded-lg shadow-xl w-full max-w-sm space-y-4">
-            <h2 className="text-lg sm:text-xl font-semibold text-gray-800">Are you sure you want to delete "{elections[electionToDelete]?.type}"?</h2>
-            <div className="flex flex-col sm:flex-row justify-end gap-2 sm:gap-4">
-              <button onClick={() => setDeleteConfirmOpen(false)} className="px-4 py-2 rounded bg-gray-100 hover:bg-gray-200 text-gray-700 w-full sm:w-auto">Cancel</button>
-              <button onClick={handleDeleteConfirmed} className="px-4 py-2 rounded bg-red-600 text-white hover:bg-red-700 w-full sm:w-auto">Delete</button>
+        <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-slate-900 rounded-xl shadow-2xl w-full max-w-sm p-6 text-center">
+            <div className="w-12 h-12 bg-red-100 dark:bg-red-900/30 text-red-600 rounded-full flex items-center justify-center mx-auto mb-4">
+              <Trash2 size={24} />
+            </div>
+            <h3 className="text-lg font-bold text-slate-800 dark:text-white mb-2">
+              Delete Election?
+            </h3>
+            <p className="text-sm text-slate-600 dark:text-slate-400 mb-6">
+              Are you sure you want to delete <strong>{elections[electionToDelete]?.type}</strong>? This action cannot be undone.
+            </p>
+            <div className="flex justify-center gap-3">
+              <button
+                onClick={() => setDeleteConfirmOpen(false)}
+                disabled={isDeleting}
+                className="px-4 py-2 rounded-lg border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 font-medium transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleDeleteConfirmed}
+                disabled={isDeleting}
+                className="px-4 py-2 rounded-lg bg-red-600 hover:bg-red-700 disabled:bg-red-400 text-white font-medium transition-colors flex items-center"
+              >
+                {isDeleting ? "Deleting..." : "Delete"}
+              </button>
             </div>
           </div>
         </div>

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from "react";
 import {
   BarChart,
   Bar,
@@ -7,173 +7,236 @@ import {
   Tooltip,
   ResponsiveContainer,
   Label,
-} from 'recharts';
-import { BarChart2, ChevronDown } from 'lucide-react';
+} from "recharts";
+import { BarChart2, ChevronDown } from "lucide-react";
+import { supabase } from "../../supabaseClient";
 
-// Sample data
-const data = [
-  { name: 'Alice', votes: 120 },
-  { name: 'Bob', votes: 90 },
-  { name: 'Charlie', votes: 70 },
-  { name: 'Diana', votes: 50 },
-  { name: 'Ethan', votes: 85 },
-  { name: 'Faith', votes: 60 },
-  { name: 'George', votes: 100 },
-  { name: 'Hannah', votes: 40 },
-];
-
-// Voter Turnout Card
-function VoterTurnoutCard() {
-  const totalVoters = 1000;
-  const votesCast = 650;
-  const percentage = ((votesCast / totalVoters) * 100).toFixed(1);
-
-  return (
-    <div className="p-4 bg-white rounded-xl shadow mb-4">
-      <h4 className="text-lg font-semibold text-slate-700 mb-2">Voter Turnout</h4>
-      <p className="text-3xl font-bold text-indigo-600">{percentage}%</p>
-      <p className="text-sm text-slate-500">{votesCast} of {totalVoters} voters have voted</p>
-    </div>
-  );
-}
-
-// Election Progress Card
-function ElectionProgressCard() {
-  const startDate = new Date('2025-07-20');
-  const endDate = new Date('2025-07-30');
-  const today = new Date();
-
-  const totalDuration = endDate - startDate;
-  const elapsed = today - startDate;
-  const rawPercentage = (elapsed / totalDuration) * 100;
-  const clampedPercentage = Math.max(0, Math.min(100, rawPercentage)).toFixed(1);
-
-  return (
-    <div className="p-4 bg-white rounded-xl shadow">
-      <h4 className="text-lg font-semibold text-slate-700 mb-2">Election Progress</h4>
-      <p className="text-3xl font-bold text-green-600">{clampedPercentage}%</p>
-      <p className="text-sm text-slate-500">From July 20 to July 30, 2025</p>
-    </div>
-  );
-}
-
-// Main Chart Component
-function RevenueChart() {
-  const [selectedElection, setSelectedElection] = useState('presidential');
+export default function RevenueChart() {
+  const [elections, setElections] = useState([]);
+  const [selectedElection, setSelectedElection] = useState(null);
+  const [chartData, setChartData] = useState([]);
   const [showDropdown, setShowDropdown] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [errorMsg, setErrorMsg] = useState("");
 
-  const electionTypes = [
-    { value: 'presidential', label: 'Presidential Election' },
-    { value: 'governor', label: 'Governor Election' },
-    { value: 'senate', label: 'Senate Election' },
-    { value: 'house', label: 'House of Representatives' },
-    { value: 'local', label: 'Local Government' }
-  ];
+  /* ───────────── FETCH ACTIVE ELECTIONS (WITH JOIN) ───────────── */
+  useEffect(() => {
+    fetchActiveElections();
+  }, []);
+
+  const fetchActiveElections = async () => {
+    setErrorMsg("");
+
+    const { data, error } = await supabase
+      .from("active_elections")
+      .select(`
+        id,
+        election_type_id,
+        election_types (
+          name
+        )
+      `);
+
+    if (error) {
+      console.error("Active elections error:", error);
+      setErrorMsg(error.message);
+      return;
+    }
+
+    const formattedElections = (data || []).map((row) => ({
+      id: row.id,
+      election_type_id: row.election_type_id,
+      election_name: row.election_types?.name || "Unnamed election",
+    }));
+
+    setElections(formattedElections);
+
+    if (formattedElections.length > 0) {
+      setSelectedElection(formattedElections[0]);
+    }
+  };
+
+  /* ───────────── FETCH VOTE RESULTS ───────────── */
+  useEffect(() => {
+    if (selectedElection?.id) {
+      fetchVoteResults(selectedElection.id);
+    }
+  }, [selectedElection]);
+
+  const fetchVoteResults = async (electionId) => {
+    setLoading(true);
+
+    const { data, error } = await supabase
+      .from("election_vote_results")
+      .select("candidate_name, vote_count")
+      .eq("election_id", electionId)
+      .order("vote_count", { ascending: false });
+
+    if (error) {
+      console.error("Vote results error:", error);
+      setChartData([]);
+    } else {
+      setChartData(
+        (data || []).map((row) => ({
+          name: row.candidate_name,
+          votes: row.vote_count,
+        }))
+      );
+    }
+
+    setLoading(false);
+  };
 
   return (
-    <div className="flex flex-col lg:flex-row gap-4 lg:gap-6">
-      {/* Main Chart */}
-      <div className="flex-1 p-4 rounded-2xl bg-white/80 dark:bg-slate-900/80 shadow-xl border border-slate-200 dark:border-slate-700 backdrop-blur-md hover:shadow-2xl hover:scale-[1.02] transition duration-300">
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-4 gap-4 sm:gap-0">
+    <div className="w-full h-full flex flex-col p-4">
+      {/* Main Card: Removed hard border, added soft shadow and rounded corners */}
+      <div className="flex-1 w-full p-6 rounded-2xl bg-white shadow-lg flex flex-col min-h-[500px]">
+        
+        {/* HEADER SECTION */}
+        <div className="flex flex-col md:flex-row justify-between mb-8 gap-4">
           <div>
-            <h3 className="text-xl font-bold text-slate-800 dark:text-white">
-              Live Vote Count Overview
-            </h3>
-            <p className="text-sm text-slate-500 dark:text-slate-400">
-              Real-Time insights into voting trends
+            <h3 className="text-2xl font-bold text-slate-800">Live Vote Count Overview</h3>
+            <p className="text-sm text-slate-500 mt-1">
+              Real-time insights from active elections
             </p>
           </div>
 
-          <div className="flex items-center space-x-4">
-            <div className="relative">
+          <div className="flex items-center gap-4">
+            {/* DROPDOWN */}
+            <div className="relative w-full md:w-64">
               <button
-                onClick={() => setShowDropdown(!showDropdown)}
-                className="flex items-center space-x-2 px-3 py-2 bg-slate-100 hover:bg-slate-200 rounded-lg text-sm font-medium text-slate-700 transition-colors"
+                onClick={() => setShowDropdown((p) => !p)}
+                className="w-full flex items-center justify-between px-4 py-2.5 bg-white hover:bg-slate-50 text-slate-700 font-medium rounded-xl shadow-sm transition-colors border-0 ring-1 ring-slate-200"
               >
-                <span>{electionTypes.find(e => e.value === selectedElection)?.label}</span>
-                <ChevronDown size={16} className={`transition-transform ${showDropdown ? 'rotate-180' : ''}`} />
+                <span className="truncate">
+                  {selectedElection?.election_name || "Select election"}
+                </span>
+                <ChevronDown
+                  size={16}
+                  className={`transition-transform text-slate-400 ${
+                    showDropdown ? "rotate-180" : ""
+                  }`}
+                />
               </button>
+
               {showDropdown && (
-                <div className="absolute right-0 mt-2 w-56 bg-white rounded-lg shadow-lg border border-slate-200 z-10">
-                  <div className="py-1">
-                    {electionTypes.map((election) => (
-                      <button
-                        key={election.value}
-                        onClick={() => {
-                          setSelectedElection(election.value);
-                          setShowDropdown(false);
-                        }}
-                        className={`w-full text-left px-4 py-2 text-sm hover:bg-slate-100 transition-colors ${
-                          selectedElection === election.value ? 'bg-blue-50 text-blue-700 font-medium' : 'text-slate-700'
-                        }`}
-                      >
-                        {election.label}
-                      </button>
-                    ))}
-                  </div>
+                <div className="absolute right-0 mt-2 w-full bg-white rounded-xl shadow-xl z-20 overflow-hidden ring-1 ring-slate-100">
+                  {elections.map((e) => (
+                    <button
+                      key={e.id}
+                      onClick={() => {
+                        setSelectedElection(e);
+                        setShowDropdown(false);
+                      }}
+                      className={`w-full text-left px-4 py-3 text-sm transition-colors ${
+                        selectedElection?.id === e.id
+                          ? "bg-indigo-50 text-indigo-700 font-semibold"
+                          : "text-slate-600 hover:bg-slate-50"
+                      }`}
+                    >
+                      {e.election_name}
+                    </button>
+                  ))}
                 </div>
               )}
             </div>
 
-            <div className="flex items-center space-x-2">
-              <div className="w-6 h-6 rounded-full bg-gradient-to-tr from-blue-500 to-purple-600 flex items-center justify-center shadow-lg">
-                <BarChart2 size={16} className="text-white" />
+            {/* LEGEND */}
+            <div className="flex items-center gap-3 bg-slate-50 px-4 py-2.5 rounded-xl shrink-0">
+              <div className="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center shadow-sm">
+                <BarChart2 size={18} className="text-white" />
               </div>
-              <div className="text-sm text-slate-800 dark:text-slate-400">
-                <span className="font-semibold">Vote Count</span>
+              <div className="flex flex-col">
+                <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Metric</span>
+                <span className="text-sm font-bold text-slate-700">Vote Count</span>
               </div>
             </div>
           </div>
         </div>
 
-        <div className="h-60 bg-slate-100 dark:bg-slate-800 rounded-lg px-2 py-1">
-          <ResponsiveContainer width="100%" height="100%">
-            <BarChart
-              data={data}
-              margin={{ top: 10, right: 10, left: 10, bottom: 20 }}
-            >
-              <XAxis
-                dataKey="name"
-                fontSize={10}
-                tickLine={false}
-                axisLine={false}
-                stroke="#94a3b8"
-                interval={0}
-                angle={-15}
-                textAnchor="end"
-                height={40}
-              >
-                <Label value="Candidates" offset={-10} position="insideBottom" fill="#64748b" />
-              </XAxis>
-              <YAxis
-                fontSize={10}
-                tickLine={false}
-                axisLine={false}
-                stroke="#94a3b8"
-              >
-                <Label value="Vote Count" angle={-90} position="insideLeft" fill="#64748b" />
-              </YAxis>
-              <Tooltip
-                contentStyle={{
-                  backgroundColor: '#fff',
-                  borderRadius: '0.5rem',
-                  border: '1px solid #e2e8f0',
-                  fontSize: '12px',
-                }}
-              />
-              <Bar dataKey="votes" fill="#6366f1" radius={[6, 6, 0, 0]} barSize={20} />
-            </BarChart>
-          </ResponsiveContainer>
-        </div>
-      </div>
+        {/* ERROR MESSAGE */}
+        {errorMsg && (
+          <div className="bg-red-50 text-red-600 px-4 py-3 rounded-xl mb-6 text-sm font-medium flex items-center">
+            <span className="mr-2">⚠️</span> {errorMsg}
+          </div>
+        )}
 
-      {/* Side Card */}
-      <div className="flex flex-col lg:w-80 gap-4">
-        <VoterTurnoutCard />
-        <ElectionProgressCard />
+        {/* CHART CONTAINER */}
+        <div className="flex-1 bg-slate-50/50 rounded-2xl p-4 md:p-6 relative w-full h-full min-h-[400px]">
+          {loading && elections.length === 0 ? (
+            <div className="absolute inset-0 flex items-center justify-center text-slate-400">
+              Loading chart data...
+            </div>
+          ) : (
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={chartData} margin={{ top: 20, right: 20, left: 0, bottom: 10 }}>
+                <XAxis
+                  dataKey="name"
+                  tickLine={false}
+                  axisLine={false}
+                  stroke="#94a3b8" // Slate-400 (Softer than black)
+                  tick={{ fill: '#64748b', fontSize: 12 }}
+                  height={80}
+                  angle={-45}
+                  textAnchor="end"
+                  interval={0}
+                >
+                  <Label
+                    value="Candidates"
+                    position="insideBottom"
+                    offset={-5}
+                    className="fill-slate-400 text-xs font-semibold"
+                  />
+                </XAxis>
+                
+                <YAxis
+                  tickLine={false}
+                  axisLine={false}
+                  stroke="#94a3b8"
+                  tick={{ fill: '#64748b', fontSize: 12 }}
+                  width={40}
+                >
+                  <Label
+                    value="Votes"
+                    angle={-90}
+                    position="insideLeft"
+                    className="fill-slate-400 text-xs font-semibold"
+                  />
+                </YAxis>
+
+                <Tooltip
+                  cursor={{ fill: 'rgba(99, 102, 241, 0.1)' }}
+                  contentStyle={{
+                    backgroundColor: 'white',
+                    borderRadius: '12px',
+                    border: '1px solid #f1f5f9', // Very light border
+                    boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
+                    padding: '12px',
+                    fontSize: '13px',
+                    color: '#1e293b'
+                  }}
+                  itemStyle={{ color: '#4f46e5' }}
+                />
+
+                <Bar
+                  dataKey="votes"
+                  fill="#6366f1"
+                  radius={[6, 6, 0, 0]}
+                  barSize={36}
+                  className="hover:opacity-90 transition-opacity"
+                />
+              </BarChart>
+            </ResponsiveContainer>
+          )}
+          
+          {!loading && chartData.length === 0 && !errorMsg && (
+            <div className="absolute inset-0 flex flex-col items-center justify-center text-slate-400">
+              <BarChart2 size={48} className="mb-2 opacity-20" />
+              <p className="text-sm">No votes recorded for this election yet.</p>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
 }
-
-export default RevenueChart;

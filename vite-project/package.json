@@ -10,8 +10,11 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@supabase/supabase-js": "^2.80.0",
+    "@emailjs/browser": "^4.4.1",
+    "@supabase/supabase-js": "^2.86.0",
     "@tailwindcss/vite": "^4.1.11",
+    "bcryptjs": "^3.0.3",
+    "emailjs-com": "^3.2.0",
     "html2canvas": "^1.4.1",
     "jspdf": "^3.0.1",
     "lucide-react": "^0.525.0",
@@ -19,6 +22,7 @@
     "react-dom": "^19.1.0",
     "react-is": "^19.1.0",
     "react-router-dom": "^7.7.0",
+    "react-toastify": "^11.0.5",
     "recharts": "^3.1.0",
     "tailwindcss": "^4.1.11"
   },

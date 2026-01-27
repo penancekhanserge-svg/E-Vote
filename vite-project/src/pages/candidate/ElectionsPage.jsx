@@ -1,82 +1,160 @@
-import React from 'react';
+import React, { useEffect, useState } from "react";
+import { supabase } from "../../supabaseClient";
 
 const ElectionsPage = () => {
-  // Sample elections data
-  const elections = [
-    {
-      id: 1,
-      title: "Presidential Election 2025",
-      date: "March 15, 2025",
-      status: "Ongoing",
-      isMyElection: true
-    },
-    {
-      id: 2,
-      title: "Parliamentary Elections",
-      date: "April 20, 2025",
-      status: "Upcoming",
-      isMyElection: false
-    },
-    {
-      id: 3,
-      title: "Local Government Chairperson",
-      date: "January 25, 2025",
-      status: "Completed",
-      isMyElection: true
-    },
-    {
-      id: 4,
-      title: "Student Council President",
-      date: "February 28, 2025",
-      status: "Ongoing",
-      isMyElection: false
-    },
-    {
-      id: 5,
-      title: "Community Board Elections",
-      date: "May 10, 2025",
-      status: "Upcoming",
-      isMyElection: false
+  const [loading, setLoading] = useState(true);
+  const [myElections, setMyElections] = useState([]);
+
+  useEffect(() => {
+    fetchMyElections();
+  }, []);
+
+  const fetchMyElections = async () => {
+    setLoading(true);
+
+    /* 1️⃣ Get logged-in user */
+    const {
+      data: { user },
+      error: userError,
+    } = await supabase.auth.getUser();
+
+    if (userError || !user) {
+      setLoading(false);
+      return;
     }
-  ];
+
+    /* 2️⃣ Get candidate profile */
+    const { data: candidate, error: candidateError } = await supabase
+      .from("candidates")
+      .select("id")
+      .eq("user_id", user.id)
+      .single();
+
+    if (candidateError || !candidate) {
+      setLoading(false);
+      return;
+    }
+
+    /* 3️⃣ Fetch elections this candidate is contesting */
+    const { data, error } = await supabase
+      .from("candidates_elections")
+      .select(`
+        election: elections (
+          id,
+          start_date,
+          end_date,
+          election_types ( name ),
+          candidates_elections (
+            candidate: candidates ( full_name )
+          )
+        )
+      `)
+      .eq("candidate_id", candidate.id);
+
+    if (error || !data) {
+      setLoading(false);
+      return;
+    }
+
+    /* 4️⃣ Format elections */
+    const now = new Date();
+
+    const formatted = data.map((row) => {
+      const election = row.election;
+
+      let status = "Upcoming";
+      if (new Date(election.start_date) <= now && new Date(election.end_date) >= now) {
+        status = "Ongoing";
+      } else if (new Date(election.end_date) < now) {
+        status = "Completed";
+      }
+
+      return {
+        id: election.id,
+        title: election.election_types?.name || "Election",
+        date: new Date(election.start_date).toDateString(),
+        status,
+        contestants: election.candidates_elections.map(
+          (ce) => ce.candidate.full_name
+        ),
+      };
+    });
+
+    setMyElections(formatted);
+    setLoading(false);
+  };
 
   const getStatusColor = (status) => {
     switch (status) {
-      case 'Ongoing': return 'bg-green-100 text-green-800';
-      case 'Upcoming': return 'bg-yellow-100 text-yellow-800';
-      case 'Completed': return 'bg-blue-100 text-blue-800';
-      default: return 'bg-gray-100 text-gray-800';
+      case "Ongoing":
+        return "bg-green-100 text-green-800";
+      case "Upcoming":
+        return "bg-yellow-100 text-yellow-800";
+      case "Completed":
+        return "bg-blue-100 text-blue-800";
+      default:
+        return "bg-gray-100 text-gray-800";
     }
   };
 
-  return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="mb-6">
-          <h1 className="text-2xl font-bold text-gray-900">Elections</h1>
-          <p className="text-gray-600 mt-1">All elections - ongoing, upcoming, and completed</p>
-        </div>
+  /* ───────────── LOADING ───────────── */
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="animate-spin h-10 w-10 border-4 border-indigo-600 border-t-transparent rounded-full" />
+      </div>
+    );
+  }
 
-        <div className="space-y-4">
-          {elections.map((election) => (
+  return (
+    <div className="min-h-screen flex flex-col items-center pt-12 px-4">
+      <div className="w-full max-w-4xl space-y-6">
+        <h1 className="text-3xl font-bold text-center text-gray-900">
+          My Elections
+        </h1>
+
+        {myElections.length === 0 && (
+          <p className="text-center text-gray-500">
+            You are not registered in any elections yet.
+          </p>
+        )}
+
+        <div className="grid gap-6">
+          {myElections.map((election) => (
             <div
               key={election.id}
-              className={`bg-white rounded-lg shadow-sm p-4 ${election.isMyElection ? 'ring-2 ring-indigo-500' : ''}`}
+              className="bg-white rounded-xl shadow-sm p-6 transition hover:shadow-lg"
             >
-              <div className="flex items-center justify-between">
+              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4">
                 <div>
-                  <h3 className="text-lg font-semibold text-gray-900">{election.title}</h3>
-                  <p className="text-sm text-gray-600">{election.date}</p>
+                  <h2 className="text-xl font-semibold text-gray-900">
+                    {election.title}
+                  </h2>
+                  <p className="text-gray-500">{election.date}</p>
                 </div>
-                <div className="flex items-center space-x-3">
-                  {election.isMyElection && (
-                    <span className="text-xs font-medium text-indigo-600 bg-indigo-50 px-2 py-1 rounded-full">
-                      My Election
+                <span
+                  className={`mt-3 sm:mt-0 text-sm font-medium px-3 py-1 rounded-full ${getStatusColor(
+                    election.status
+                  )}`}
+                >
+                  {election.status}
+                </span>
+              </div>
+
+              {/* Contestants */}
+              <div>
+                <p className="text-sm font-semibold text-gray-700 mb-2">
+                  Contestants
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  {election.contestants.map((name) => (
+                    <span
+                      key={name}
+                      className="bg-indigo-100 text-indigo-800 text-xs px-3 py-1 rounded-full font-medium"
+                    >
+                      {name}
                     </span>
-                  )}
-                  <span className={`text-xs font-medium px-2 py-1 rounded-full ${getStatusColor(election.status)}`}>
-                    {election.status}
-                  </span>
+                  ))}
                 </div>
               </div>
             </div>

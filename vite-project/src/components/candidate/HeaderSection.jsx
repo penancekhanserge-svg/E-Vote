@@ -1,179 +1,134 @@
-
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Search, Bell, Settings, ChevronDown, User, LogOut, Menu } from "lucide-react";
+import {
+  Settings,
+  ChevronDown,
+  User,
+  LogOut,
+  Menu,
+} from "lucide-react";
 
 const HeaderSection = ({ onToggleSidebar }) => {
   const navigate = useNavigate();
-  const [showNotifications, setShowNotifications] = useState(false);
   const [showProfileMenu, setShowProfileMenu] = useState(false);
 
+  // ✅ GET USER INFO FROM SESSION
+  const userName = localStorage.getItem("userName") || "Candidate";
+
   const handleSettingsClick = () => {
-    navigate('/candidate-dashboard/settings');
+    navigate("/candidate-dashboard/settings");
   };
 
   const handleViewProfile = () => {
-    navigate('/candidate-dashboard/profile');
+    navigate("/candidate-dashboard/profile");
   };
 
   const handleSignOut = () => {
-    navigate('/auth/login');
+    localStorage.clear();
+    navigate("/auth/login");
   };
 
   return (
-    <header className="flex justify-between items-center bg-white shadow px-6 py-4">
-      {/* Left: menu icon, title and searchbar */}
-      <div className="flex items-center space-x-6">
-        <button
-          onClick={onToggleSidebar}
-          className="p-2 rounded-lg hover:bg-gray-100 transition-colors duration-200"
-          aria-label="Toggle sidebar"
-        >
-          <Menu className="h-5 w-5 text-gray-600" />
-        </button>
-        <div>
-          <h1 className="text-xl font-semibold text-slate-800 dark:text-white">Candidates Dashboard</h1>
-          <p>Welcome back Serge lets deliver a fair election</p>
-        </div>
-      </div>
-
-      {/* Right: Action */}
-      <div className="flex items-center space-x-3">
-        {/* Notifications */}
-        <div className="relative">
-          <button 
-            onClick={() => setShowNotifications(!showNotifications)}
-            className="relative p-2 rounded-lg hover:bg-gray-100"
+    <header className="bg-white shadow px-4 sm:px-6 py-4">
+      <div className="flex justify-between items-center">
+        {/* LEFT SECTION */}
+        <div className="flex items-center gap-3">
+          {/* Sidebar toggle (mobile) */}
+          <button
+            onClick={onToggleSidebar}
+            className="md:hidden p-2 rounded-lg hover:bg-gray-100"
+            aria-label="Toggle sidebar"
           >
-            <Bell className="h-5 w-5 text-gray-600" />
-            <span className="absolute top-1 right-1 block h-2 w-2 bg-red-500 rounded-full"></span>
+            <Menu className="w-6 h-6 text-gray-700" />
           </button>
 
-          {/* Notification Dropdown */}
-          {showNotifications && (
-            <div className="absolute right-0 mt-3 w-80 bg-white shadow-xl rounded-xl border border-gray-100 z-50 overflow-hidden">
-              <div className="bg-gradient-to-r from-blue-600 to-purple-600 px-4 py-3">
-                <h3 className="text-white font-semibold text-lg flex items-center">
-                  <Bell className="h-5 w-5 mr-2" />
-                  Notifications
-                  <span className="ml-auto bg-white/20 text-white text-xs px-2 py-1 rounded-full">3</span>
-                </h3>
-              </div>
-              
-              <div className="max-h-80 overflow-y-auto">
-                <div className="divide-y divide-gray-100">
-                  {/* Notification Item 1 */}
-                  <div className="p-4 hover:bg-gray-50 cursor-pointer transition-colors duration-200">
-                    <div className="flex items-start space-x-3">
-                      <div className="flex-shrink-0">
-                        <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
-                          <Bell className="h-5 w-5 text-blue-600" />
-                        </div>
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium text-gray-900">Election Results</p>
-                        <p className="text-sm text-gray-600 mt-1">Election results will be published soon. Stay tuned for updates!</p>
-                        <p className="text-xs text-gray-400 mt-2">2 hours ago</p>
-                      </div>
-                    </div>
-                  </div>
+          <div className="leading-tight">
+            <h1 className="text-lg sm:text-xl font-semibold text-slate-800">
+              Candidate Dashboard
+            </h1>
+            <p className="hidden sm:block text-sm text-gray-500">
+              Welcome back {userName}, let’s deliver a fair election
+            </p>
+          </div>
+        </div>
 
-                  {/* Notification Item 2 */}
-                  <div className="p-4 hover:bg-gray-50 cursor-pointer transition-colors duration-200">
-                    <div className="flex items-start space-x-3">
-                      <div className="flex-shrink-0">
-                        <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
-                          <User className="h-5 w-5 text-green-600" />
-                        </div>
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium text-gray-900">Profile Updated</p>
-                        <p className="text-sm text-gray-600 mt-1">Your profile was updated successfully with new information.</p>
-                        <p className="text-xs text-gray-400 mt-2">1 day ago</p>
-                      </div>
-                    </div>
-                  </div>
+        {/* RIGHT SECTION */}
+        <div className="flex items-center gap-2 sm:gap-3">
+          {/* Settings */}
+          <button
+            onClick={handleSettingsClick}
+            className="hidden sm:flex p-2 rounded-lg hover:bg-gray-100"
+            aria-label="Settings"
+          >
+            <Settings className="h-5 w-5 text-gray-600" />
+          </button>
 
-                  {/* Notification Item 3 */}
-                  <div className="p-4 hover:bg-gray-50 cursor-pointer transition-colors duration-200">
-                    <div className="flex items-start space-x-3">
-                      <div className="flex-shrink-0">
-                        <div className="w-10 h-10 bg-purple-100 rounded-full flex items-center justify-center">
-                          <Settings className="h-5 w-5 text-purple-600" />
-                        </div>
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium text-gray-900">New Election Round</p>
-                        <p className="text-sm text-gray-600 mt-1">New election round starting next week. Prepare your campaign materials!</p>
-                        <p className="text-xs text-gray-400 mt-2">3 days ago</p>
-                      </div>
-                    </div>
-                  </div>
+          {/* PROFILE DROPDOWN */}
+          <div className="relative">
+            <button
+              onClick={() => setShowProfileMenu((p) => !p)}
+              className="flex items-center gap-2 p-2 rounded-lg hover:bg-gray-100"
+            >
+              <img
+                src="/profile.jpg"
+                alt="profile"
+                className="w-9 h-9 rounded-full border object-cover"
+              />
+
+              {/* Hide name on small screens */}
+              <span className="hidden md:block font-medium text-gray-700">
+                {userName}
+              </span>
+
+              <ChevronDown className="hidden sm:block h-4 w-4 text-gray-600" />
+            </button>
+
+            {showProfileMenu && (
+              <div className="absolute right-0 mt-2 w-56 bg-white shadow-xl rounded-xl border border-gray-100 z-50 overflow-hidden">
+                <div className="bg-gradient-to-r from-indigo-600 to-purple-600 px-4 py-3">
+                  <h3 className="text-white font-semibold text-lg flex items-center">
+                    <User className="h-5 w-5 mr-2" />
+                    Account
+                  </h3>
+                  <p className="text-xs text-indigo-100 mt-1 truncate">
+                    {userName}
+                  </p>
+                </div>
+
+                <div className="py-2">
+                  {/* Mobile settings */}
+                  <button
+                    onClick={handleSettingsClick}
+                    className="sm:hidden w-full flex items-center px-4 py-3 text-sm hover:bg-gray-50"
+                  >
+                    <Settings className="h-4 w-4 mr-3 text-gray-600" />
+                    Settings
+                  </button>
+
+                  <div className="border-t border-gray-100 my-1" />
+
+                  <button
+                    onClick={() => {
+                    localStorage.clear();
+                    window.location.href = "/auth/login";
+                  }}
+                    className="w-full flex items-center px-4 py-3 text-sm text-red-600 hover:bg-red-50"
+                  >
+                    <LogOut className="h-4 w-4 mr-3" />
+                    Sign Out
+                  </button>
+
                 </div>
               </div>
-              
-              <div className="bg-gray-50 px-4 py-3 border-t border-gray-100">
-                <button className="w-full text-center text-blue-600 hover:text-blue-800 font-medium text-sm transition-colors duration-200">
-                  View All Notifications →
-                </button>
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* Settings */}
-        <button 
-          onClick={handleSettingsClick}
-          className="p-2 rounded-lg hover:bg-gray-100">
-          <Settings className="h-5 w-5 text-gray-600" />
-        </button>
-
-        {/* profile Menu */}
-        <div className="relative">
-          <div
-            onClick={() => setShowProfileMenu(!showProfileMenu)}
-            className="flex items-center space-x-2 cursor-pointer hover:bg-gray-100 p-2 rounded-lg"
-          >
-            <img 
-              src="/profile.jpg"
-              alt="profile"
-              className="w-10 h-10 rounded-full border"
-            />
-            <span className="font-medium">John Doe</span>
-            <ChevronDown className="h-4 w-4 text-gray-600" />
+            )}
           </div>
-
-          {/* Profile Dropdown */}
-          {showProfileMenu && (
-            <div className="absolute right-0 mt-2 w-56 bg-white shadow-xl rounded-xl border border-gray-100 z-50 overflow-hidden">
-              <div className="bg-gradient-to-r from-purple-600 to-pink-600 px-4 py-3">
-                <h3 className="text-white font-semibold text-lg flex items-center">
-                  <User className="h-5 w-5 mr-2" />
-                  Account
-                </h3>
-              </div>
-              
-              <div className="py-2">
-                <button
-                onClick={handleViewProfile}
-                 className="w-full flex items-center px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 transition-colors duration-200">
-                  <User className="h-4 w-4 mr-3 text-gray-500" />
-                  <span>View Profile</span>
-                </button>
-                
-                <div className="border-t border-gray-100 my-1"></div>
-                
-                <button 
-                  onClick={handleSignOut}
-                  className="w-full flex items-center px-4 py-3 text-sm text-red-600 hover:bg-red-50 transition-colors duration-200">
-                  <LogOut className="h-4 w-4 mr-3" />
-                  <span>Sign Out</span>
-                </button>
-              </div>
-            </div>
-          )}
         </div>
       </div>
+
+      {/* MOBILE SUBTITLE */}
+      <p className="sm:hidden mt-2 text-sm text-gray-500">
+        Welcome back {userName}, let’s deliver a fair election
+      </p>
     </header>
   );
 };

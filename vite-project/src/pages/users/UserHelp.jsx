@@ -1,7 +1,12 @@
 import React, { useState } from 'react';
+import emailjs from "emailjs-com";
+import { toast, ToastContainer } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 
 function Support() {
   const [activeIndex, setActiveIndex] = useState(null);
+  const [loading, setLoading] = useState(false);
+
   const [formData, setFormData] = useState({
     fullName: '',
     email: '',
@@ -11,34 +16,34 @@ function Support() {
 
   const faqs = [
     {
-      question: 'How do I reset my password?',
+      question: 'How do I reset my admin password?',
       answer:
-        'Sign Out to the login page and click on "Forgot Password". Follow the instructions to reset your password.',
+        'Go to your profile settings and click on "Change Password". Follow the instructions to reset your password.',
     },
     {
-      question: 'How do I cast my vote?',
+      question: 'Can I publish results after submission?',
       answer:
-        'Navigate to the "Vote Now" section on your dashboard, select your preferred candidate, and click "Submit Vote". Your vote will be securely recorded and encrypted.',
+        'Yes, results can be published anytime unless locked by the system admin.',
     },
     {
-      question: 'Can I change my vote after submitting it?',
+      question: 'How can I reach technical support?',
       answer:
-        'No. Once a vote is submitted, it cannot be changed. Review your choice carefully before confirming.',
+        'Use the contact form below or email support@electionportal.com.',
     },
     {
-      question: 'How do I check my voting status?',
+      question: 'How do I update election details?',
       answer:
-        'Check your voting status on the top-right corner of the dashboard under "My Voting Status".',
+        'Navigate to the Election Management panel, select the election, and click "Edit".',
     },
     {
-      question: 'When will I see the results?',
+      question: 'Can I export election results?',
       answer:
-        'Results are announced on the date specified in the "Upcoming Events" section of your dashboard.',
+        'You can export election results as PDFs by using the Export PDF button on the results page.',
     },
     {
-      question: 'Is my vote anonymous?',
+      question: 'How do I add new candidates?',
       answer:
-        'Yes. Your identity is never linked to your vote. All votes are encrypted and stored securely.',
+        'Go to the Election Management panel, select the election, and use the Add Candidate button.',
     },
   ];
 
@@ -62,20 +67,35 @@ function Support() {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    alert(
-      `Request sent!\n\nName: ${formData.fullName}\nEmail: ${formData.email}\nSubject: ${formData.subject}\nMessage: ${formData.message}`
-    );
-    handleReset();
+    setLoading(true);
+
+    emailjs.send(
+      "service_ojhb2v1",      // Service ID
+      "template_chxvk3p",     // Template ID
+      formData,               // { fullName, email, subject, message }
+      "vupOZWa7Do2QknCAp"     // Public Key
+    )
+    .then(() => {
+      toast.success("Message sent successfully!");
+      handleReset();
+    })
+    .catch((error) => {
+      console.error("EmailJS error:", error);
+      toast.error("Failed to send message");
+    })
+    .finally(() => {
+      setLoading(false);
+    });
   };
 
   return (
-    <div className="max-w-6xl mx-auto px-4 py-12">
+    <div className="max-w-6xl mx-auto">
       {/* Header */}
       <div className="text-center mb-10">
-        <h1 className="text-4xl font-bold text-blue-700">
+        <h1 className="text-4xl font-bold text-indigo-700 dark:text-indigo-400">
           Support & Help Center
         </h1>
-        <p className="mt-2 text-black text-base max-w-xl mx-auto">
+        <p className="mt-2 text-gray-600 dark:text-gray-400 text-base max-w-xl mx-auto">
           Need assistance? Browse our FAQs or reach out to our support team directly.
         </p>
       </div>
@@ -83,16 +103,19 @@ function Support() {
       {/* FAQ + Contact Form Cards */}
       <div className="flex flex-col md:flex-row gap-8">
         {/* FAQ Card */}
-        <div className="flex-1 bg-white shadow-xl border border-blue-200 rounded-2xl p-6 transition">
-          <h2 className="text-xl font-semibold text-blue-700 mb-6">
+        <div className="flex-1 bg-gradient-to-br from-indigo-100 to-white dark:from-slate-800 dark:to-slate-900 shadow-2xl border border-indigo-200 dark:border-slate-700 rounded-2xl p-6 transition">
+          <h2 className="text-xl font-semibold text-indigo-900 dark:text-white mb-6">
             Frequently Asked Questions
           </h2>
           <div className="space-y-3">
             {faqs.map((faq, index) => (
-              <div key={index} className="rounded-md overflow-hidden border border-blue-200">
+              <div
+                key={index}
+                className="rounded-md overflow-hidden border border-indigo-200 dark:border-slate-600"
+              >
                 <button
                   onClick={() => toggleFAQ(index)}
-                  className="w-full text-left px-5 py-3 font-medium text-black flex justify-between items-center bg-white hover:bg-blue-50 transition"
+                  className="w-full text-left px-5 py-3 font-medium text-sm text-gray-800 dark:text-white flex justify-between items-center bg-white dark:bg-slate-800 hover:bg-indigo-50 dark:hover:bg-slate-700 transition"
                 >
                   {faq.question}
                   <span className="text-xl font-bold">
@@ -100,7 +123,7 @@ function Support() {
                   </span>
                 </button>
                 {activeIndex === index && (
-                  <div className="px-5 py-3 text-black text-sm bg-blue-50">
+                  <div className="px-5 py-3 text-gray-600 dark:text-gray-300 text-sm bg-indigo-50 dark:bg-slate-800">
                     {faq.answer}
                   </div>
                 )}
@@ -110,8 +133,8 @@ function Support() {
         </div>
 
         {/* Contact Support Form */}
-        <div className="flex-1 bg-white shadow-xl border border-blue-200 rounded-2xl p-6 transition">
-          <h2 className="text-xl font-semibold text-blue-700 mb-6">
+        <div className="flex-1 bg-gradient-to-br from-indigo-100 to-white dark:from-slate-800 dark:to-slate-900 shadow-2xl border border-indigo-200 dark:border-slate-700 rounded-2xl p-6 transition">
+          <h2 className="text-xl font-semibold text-indigo-900 dark:text-white mb-6">
             Contact Support
           </h2>
 
@@ -123,8 +146,9 @@ function Support() {
               onChange={handleChange}
               placeholder="Full Name"
               required
-              className="w-full px-4 py-3 rounded-lg border border-blue-200 bg-white text-black focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-4 py-3 rounded-lg border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-900 text-gray-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
             />
+
             <input
               type="email"
               name="email"
@@ -132,8 +156,9 @@ function Support() {
               onChange={handleChange}
               placeholder="Email Address"
               required
-              className="w-full px-4 py-3 rounded-lg border border-blue-200 bg-white text-black focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-4 py-3 rounded-lg border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-900 text-gray-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
             />
+
             <input
               type="text"
               name="subject"
@@ -141,8 +166,9 @@ function Support() {
               onChange={handleChange}
               placeholder="Subject"
               required
-              className="w-full px-4 py-3 rounded-lg border border-blue-200 bg-white text-black focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-4 py-3 rounded-lg border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-900 text-gray-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
             />
+
             <textarea
               name="message"
               value={formData.message}
@@ -150,46 +176,48 @@ function Support() {
               placeholder="Message"
               rows={5}
               required
-              className="w-full px-4 py-3 rounded-lg border border-blue-200 bg-white text-black resize-none focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-4 py-3 rounded-lg border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-900 text-gray-800 dark:text-white resize-none focus:outline-none focus:ring-2 focus:ring-indigo-500"
             />
+
             <div className="flex justify-between gap-4">
               <button
                 type="reset"
                 onClick={handleReset}
-                className="w-full py-2 rounded-lg bg-blue-100 text-black hover:bg-blue-200 transition"
+                disabled={loading}
+                className="w-full py-2 rounded-lg bg-gray-200 dark:bg-slate-700 text-gray-800 dark:text-gray-200 hover:bg-gray-300 dark:hover:bg-slate-600 transition disabled:opacity-60"
               >
                 Reset
               </button>
+
               <button
                 type="submit"
-                className="w-full py-2 rounded-lg bg-blue-700 text-white hover:bg-blue-800 transition"
+                disabled={loading}
+                className={`w-full py-2 rounded-lg text-white transition
+                  ${loading
+                    ? "bg-indigo-400 cursor-not-allowed"
+                    : "bg-indigo-600 hover:bg-indigo-700"
+                  }
+                `}
               >
-                Send Request
+                {loading ? "Sending..." : "Send Request"}
               </button>
             </div>
           </form>
         </div>
       </div>
-
-      {/* Download Manual Row */}
-      <div className="flex flex-col md:flex-row gap-8 mt-10">
-        {/* Download Manual */}
-        <div className="flex-1 bg-white shadow-xl rounded-2xl p-6 border border-blue-200 transition hover:scale-[1.01]">
-          <h2 className="text-xl font-semibold text-blue-700 mb-3">
-            Download User Manual
-          </h2>
-          <p className="text-black mb-4 text-sm">
-            Need help navigating the system? Download our comprehensive user manual to get started quickly.
-          </p>
-          <a
-            href="/manuals/user-manual.pdf"
-            download
-            className="inline-block bg-blue-700 text-white px-5 py-2 rounded-lg hover:bg-blue-800 transition"
-          >
-            ⬇️ Download Manual (PDF)
-          </a>
-        </div>
-      </div>
+      
+      <ToastContainer
+        position="top-right"
+        autoClose={5000}
+        hideProgressBar={false}
+        newestOnTop={false}
+        closeOnClick
+        rtl={false}
+        pauseOnFocusLoss
+        draggable
+        pauseOnHover
+        theme="light"
+      />
     </div>
   );
 }

@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
+import { toast, ToastContainer } from 'react-toastify';
+import "react-toastify/dist/ReactToastify.css";
 
 function Password() {
   const [step, setStep] = useState(1);
@@ -7,58 +9,133 @@ function Password() {
   const [otp, setOtp] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [resetToken, setResetToken] = useState(null);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
-  const handleEmailSubmit = (e) => {
+  const API = import.meta.env.VITE_SUPABASE_URL;
+  const ANON = import.meta.env.VITE_SUPABASE_ANON_KEY;
+
+  const handleEmailSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
-    setError('');
-    
-    // Simulate API call
-    setTimeout(() => {
-      setLoading(false);
+
+    try {
+      const res = await fetch(`${API}/functions/v1/send-reset-otp`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${ANON}`,
+        },
+        body: JSON.stringify({ email }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        toast.error(data.error || 'Failed to send OTP');
+        setLoading(false);
+        return;
+      }
+
+      toast.success('OTP sent to your email.');
       setStep(2);
-    }, 1500);
+    } catch {
+      toast.error('Network error. Please try again.');
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleOtpSubmit = (e) => {
+  const handleOtpSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
-    setError('');
-    
-    // Simulate OTP verification
-    setTimeout(() => {
-      setLoading(false);
+
+    try {
+      const res = await fetch(`${API}/functions/v1/verify-reset-otp`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${ANON}`,
+        },
+        body: JSON.stringify({ email, otp }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        toast.error(data.error || 'Invalid OTP');
+        setLoading(false);
+        return;
+      }
+
+      setResetToken(data.resetToken);
+      toast.success('OTP verified successfully.');
       setStep(3);
-    }, 1500);
+    } catch {
+      toast.error('Network error. Please try again.');
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handlePasswordReset = (e) => {
+  const validatePassword = (pwd) => {
+    const regex =
+      /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?]).{8,}$/;
+    return regex.test(pwd);
+  };
+
+  const handlePasswordReset = async (e) => {
     e.preventDefault();
-    setError('');
-    
+
+    if (!validatePassword(newPassword)) {
+      toast.error(
+        'Password must be at least 8 characters long and include uppercase, lowercase, number, and special character.'
+      );
+      return;
+    }
+
     if (newPassword !== confirmPassword) {
-      setError('Passwords do not match');
+      toast.error('Passwords do not match.');
       return;
     }
-    
-    if (newPassword.length < 6) {
-      setError('Password must be at least 6 characters');
-      return;
-    }
-    
+
     setLoading(true);
-    
-    // Simulate password reset
-    setTimeout(() => {
-      setLoading(false);
+
+    try {
+      const res = await fetch(`${API}/functions/v1/reset-password`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${ANON}`,
+        },
+        body: JSON.stringify({
+          email,
+          reset_token: resetToken,
+          new_password: newPassword,
+        }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        toast.error(data.error || 'Password reset failed');
+        setLoading(false);
+        return;
+      }
+
+      toast.success('Password reset successful!');
       setStep(4);
-    }, 1500);
+    } catch {
+      toast.error('Network error. Please try again.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const renderStep = () => {
-    switch(step) {
+    switch (step) {
       case 1:
         return (
           <form onSubmit={handleEmailSubmit} className="space-y-5">
@@ -75,7 +152,7 @@ function Password() {
                 placeholder="you@example.com"
               />
             </div>
-            
+
             <button
               type="submit"
               disabled={loading}
@@ -85,7 +162,7 @@ function Password() {
             </button>
           </form>
         );
-        
+
       case 2:
         return (
           <form onSubmit={handleOtpSubmit} className="space-y-5">
@@ -106,7 +183,7 @@ function Password() {
                 We've sent a 6-digit verification code to {email}
               </p>
             </div>
-            
+
             <button
               type="submit"
               disabled={loading}
@@ -116,42 +193,50 @@ function Password() {
             </button>
           </form>
         );
-        
+
       case 3:
         return (
           <form onSubmit={handlePasswordReset} className="space-y-5">
-            <div>
+            <div className="relative">
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 New Password
               </label>
               <input
-                type="password"
+                type={showNewPassword ? 'text' : 'password'}
                 required
                 value={newPassword}
                 onChange={(e) => setNewPassword(e.target.value)}
-                className="w-full border border-gray-300 rounded-md px-4 py-3 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                placeholder="Enter new password"
+                className="w-full border border-gray-300 rounded-md px-4 py-3 focus:outline-none focus:ring-2 focus:ring-indigo-500 pr-10"
               />
+              <button
+                type="button"
+                onClick={() => setShowNewPassword(!showNewPassword)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500"
+              >
+                {showNewPassword ? 'Hide' : 'Show'}
+              </button>
             </div>
-            
-            <div>
+
+            <div className="relative">
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Confirm New Password
               </label>
               <input
-                type="password"
+                type={showConfirmPassword ? 'text' : 'password'}
                 required
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
-                className="w-full border border-gray-300 rounded-md px-4 py-3 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                placeholder="Confirm new password"
+                className="w-full border border-gray-300 rounded-md px-4 py-3 focus:outline-none focus:ring-2 focus:ring-indigo-500 pr-10"
               />
+              <button
+                type="button"
+                onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500"
+              >
+                {showConfirmPassword ? 'Hide' : 'Show'}
+              </button>
             </div>
-            
-            {error && (
-              <div className="text-red-500 text-sm text-center">{error}</div>
-            )}
-            
+
             <button
               type="submit"
               disabled={loading}
@@ -161,30 +246,25 @@ function Password() {
             </button>
           </form>
         );
-        
+
       case 4:
         return (
           <div className="text-center space-y-4">
-            <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto">
-              <svg className="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
-              </svg>
-            </div>
-            
-            <h3 className="text-xl font-semibold text-gray-900">Password Reset Successful!</h3>
+            <h3 className="text-xl font-semibold text-gray-900">
+              Password Reset Successful!
+            </h3>
             <p className="text-gray-600">
-              Your password has been successfully reset. You can now log in with your new password.
+              Your password has been successfully reset.
             </p>
-            
             <Link
               to="/auth/login"
-              className="inline-block bg-indigo-600 hover:bg-indigo-700 text-white font-semibold px-6 py-3 rounded-md transition duration-300 shadow-md"
+              className="inline-block bg-indigo-600 hover:bg-indigo-700 text-white font-semibold px-6 py-3 rounded-md"
             >
               Go to Login
             </Link>
           </div>
         );
-        
+
       default:
         return null;
     }
@@ -193,14 +273,8 @@ function Password() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-100 px-4">
       <div className="max-w-md w-full bg-white rounded-xl shadow-2xl p-8 space-y-6">
-        
-        {/* Logo & Title Section */}
         <div className="flex items-center justify-center space-x-3">
-          <img
-            src="/vote3.png" 
-            alt="Logo"
-            className="h-12 w-12 object-contain"
-          />
+          <img src="/logo2.png" alt="Logo" className="h-20 w-20 object-contain" />
           <h1 className="text-2xl font-bold text-indigo-700">VoteSecure</h1>
         </div>
 
@@ -211,12 +285,6 @@ function Password() {
             {step === 3 && 'Reset Password'}
             {step === 4 && 'Success'}
           </h2>
-          <p className="text-gray-500 text-sm mt-1">
-            {step === 1 && 'Enter your email to reset your password'}
-            {step === 2 && 'Enter the verification code sent to your email'}
-            {step === 3 && 'Create a new password for your account'}
-            {step === 4 && 'Your password has been successfully reset'}
-          </p>
         </div>
 
         {renderStep()}
@@ -229,6 +297,19 @@ function Password() {
           </div>
         )}
       </div>
+
+      <ToastContainer
+        position="top-right"
+        autoClose={3000}
+        hideProgressBar={false}
+        newestOnTop={false}
+        closeOnClick
+        rtl={false}
+        pauseOnFocusLoss
+        draggable
+        pauseOnHover
+        theme="light"
+      />
     </div>
   );
 }

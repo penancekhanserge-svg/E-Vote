@@ -4,7 +4,6 @@ import {
   LayoutDashboard,
   BarChart2,
   Award,
-  Info,
   HelpCircle,
   LogOut,
   Settings
@@ -28,16 +27,14 @@ const Sidebar = ({ isCollapsed }) => {
   }, [isCollapsed]);
 
   const links = [
-    { name: "Dashboard", path: "/user-dashboard", icon: <LayoutDashboard className="h-5 w-5 text-gray-700" />, color: "text-blue-500", textSize: "text-lg" },
     { name: "Vote Now", path: "/user-dashboard/vote-cast", icon: <BarChart2 className="h-5 w-5 text-purple-600" />, color: "text-green-500", textSize: "text-lg" },
     { name: "Results", path: "/user-dashboard/result", icon: <Award className="h-5 w-5 text-blue-600" />, color: "text-yellow-500", textSize: "text-lg" },
-    { name: "About", path: "/user-dashboard/user-about", icon: <Info className="h-5 w-5 text-sky-500" />, color: "text-orange-500", textSize: "text-lg" },
     { name: "Help", path: "/user-dashboard/user-help", icon: <HelpCircle className="h-5 w-5 text-orange-600" />, color: "text-teal-500", textSize: "text-lg" },
     { name: "Settings", path: "/user-dashboard/user-settings", icon: <Settings className="h-5 w-5 text-gray-600" />, color: "text-red-500", textSize: "text-lg" },
   ];
 
   return (
-    <div className={`${collapsed ? 'w-20' : 'w-64'} bg-gradient-to-b from-white to-gray-50 shadow-xl flex flex-col border-r border-gray-100 transition-all duration-300 ease-in-out relative`}>
+    <div className={`${collapsed ? 'w-20' : 'w-48'} bg-gradient-to-b from-white to-gray-50 shadow-xl flex flex-col border-r border-gray-100 transition-all duration-300 ease-in-out relative z-40`}>
       
       {/* Logo Section */}
       <div className="p-6 flex items-center space-x-3 border-b border-gray-100">
@@ -60,35 +57,43 @@ const Sidebar = ({ isCollapsed }) => {
             }
           >
             <span className={link.color}>{link.icon}</span>
-            {!collapsed && <span className={`${link.textSize} font-medium`}>{link.name}</span>}
-
-            {/* Plain text tooltip for collapsed sidebar */}
+            
+            {/* --- Plain Text Tooltip for Collapsed Sidebar --- */}
             {collapsed && (
-              <span className="absolute left-full ml-2 text-gray-800 text-sm opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none">
+              <span className="absolute left-full ml-4 whitespace-nowrap text-gray-800 text-base font-medium opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none z-50 select-none">
                 {link.name}
               </span>
             )}
+
+            {!collapsed && <span className={`${link.textSize} font-medium`}>{link.name}</span>}
           </NavLink>
         ))}
       </nav>
 
       {/* Logout Button */}
-      <div className={`${collapsed ? 'p-4' : 'p-6'} border-t border-gray-100 relative`}>
-        <NavLink
-          to="/auth/login"
-          className={`flex items-center ${collapsed ? 'justify-center group relative' : 'space-x-3'} px-4 py-3 rounded-xl font-medium text-red-500 hover:bg-red-100 hover:text-red-600 transition-all duration-200 ease-in-out transform hover:scale-[1.02]`}
-        >
-          <LogOut className="h-6 w-6" />
-          {!collapsed && <span className="text-lg font-medium">Sign Out</span>}
+      <div className={`${collapsed ? "p-4" : "p-6"} border-t border-gray-100 relative`}>
+  <button
+    onClick={() => {
+      localStorage.clear();
+      window.location.href = "/auth/login";
+    }}
+    className={`flex items-center w-full ${
+      collapsed ? "justify-center group relative" : "space-x-3"
+    } px-4 py-3 rounded-xl font-medium text-red-500 hover:bg-red-100 hover:text-red-600 transition-all duration-200 ease-in-out transform hover:scale-[1.02]`}
+  >
+    <LogOut className="h-6 w-6" />
 
-          {/* Plain text tooltip */}
-          {collapsed && (
-            <span className="absolute left-full ml-2 text-red-500 text-sm opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none">
-              Sign Out
-            </span>
-          )}
-        </NavLink>
-      </div>
+    {/* Tooltip (collapsed sidebar) */}
+    {collapsed && (
+      <span className="absolute left-full ml-4 whitespace-nowrap text-red-600 text-base font-medium opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none z-50 select-none">
+        Sign Out
+      </span>
+    )}
+
+    {!collapsed && <span className="text-lg font-medium">Sign Out</span>}
+  </button>
+</div>
+
     </div>
   );
 };

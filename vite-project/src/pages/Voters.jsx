@@ -1,18 +1,9 @@
-import React, { useState } from 'react';
-import { Users, CheckCircle, XCircle, Search, Pencil, Trash2, Eye, EyeOff } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Users, CheckCircle, XCircle, Search, Pencil, Trash2, Eye, EyeOff, ChevronLeft, ChevronRight } from 'lucide-react';
+import { supabase } from '../supabaseClient';
+import bcrypt from 'bcryptjs';
 
-const mockVotersInit = [
-  { name: 'John Serge', email: 'john@gmail.com', voterId: 'VTR001', status: 'Not Voted' },
-  { name: 'Mary Anne', email: 'mary@gmail.com', voterId: 'VTR002', status: 'Voted' },
-  { name: 'Peter Doe', email: 'peter@gmail.com', voterId: 'VTR003', status: 'Not Voted' },
-  { name: 'Alice Smith', email: 'alice@gmail.com', voterId: 'VTR004', status: 'Voted' },
-  { name: 'Rose Kay', email: 'rose@gmail.com', voterId: 'VTR005', status: 'Voted' },
-  { name: 'Sam Lee', email: 'sam@gmail.com', voterId: 'VTR006', status: 'Not Voted' },
-  { name: 'Ella Joe', email: 'ella@gmail.com', voterId: 'VTR007', status: 'Voted' },
-  { name: 'Mark Twin', email: 'mark@gmail.com', voterId: 'VTR008', status: 'Not Voted' },
-  { name: 'Lucy Heart', email: 'lucy@gmail.com', voterId: 'VTR009', status: 'Voted' },
-  { name: 'Tom Hardy', email: 'tom@gmail.com', voterId: 'VTR010', status: 'Not Voted' },
-];
+const mockVotersInit = [];
 
 function Voters() {
   const [searchTerm, setSearchTerm] = useState('');
@@ -20,7 +11,7 @@ function Voters() {
 
   // Pagination
   const [currentPage, setCurrentPage] = useState(1);
-  const votersPerPage = 5;
+  const votersPerPage = 10;
 
   // Popups
   const [showAddPopup, setShowAddPopup] = useState(false);
@@ -29,93 +20,188 @@ function Voters() {
   const [selectedVoter, setSelectedVoter] = useState(null);
 
   // Form
-  const [formData, setFormData] = useState({ name: '', email: '', password: '', confirmPassword: '' });
+  const [formData, setFormData] = useState({
+    name: '',
+    email: '',
+    password: '',
+    confirmPassword: ''
+  });
+
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [isRegistering, setIsRegistering] = useState(false);
 
-  // Filtered voters
+  /* ================= FETCH VOTERS ================= */
+  useEffect(() => {
+    fetchVoters();
+  }, []);
+
+  const fetchVoters = async () => {
+    const { data, error } = await supabase
+      .from('voters')
+      .select('id, full_name, email, has_voted');
+
+    if (error) {
+      alert(error.message);
+      return;
+    }
+
+    setMockVoters(
+      data.map(v => ({
+        id: v.id,
+        name: v.full_name,
+        email: v.email,
+        status: v.has_voted ? 'Voted' : 'Not Voted',
+      }))
+    );
+  };
+
+  /* ================= FILTER & PAGINATION ================= */
   const filteredVoters = mockVoters.filter(voter =>
     voter.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    voter.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    voter.voterId.toLowerCase().includes(searchTerm.toLowerCase())
+    voter.email.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  // Pagination calculations
+  // Reset page on search change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm]);
+
   const indexOfLastVoter = currentPage * votersPerPage;
   const indexOfFirstVoter = indexOfLastVoter - votersPerPage;
   const currentVoters = filteredVoters.slice(indexOfFirstVoter, indexOfLastVoter);
+
   const totalPages = Math.ceil(filteredVoters.length / votersPerPage);
 
   const total = mockVoters.length;
   const voted = mockVoters.filter(v => v.status === 'Voted').length;
   const notVoted = total - voted;
 
-  const handleFormChange = e => setFormData({ ...formData, [e.target.name]: e.target.value });
+  const handleFormChange = e =>
+    setFormData({ ...formData, [e.target.name]: e.target.value });
 
   const openAddPopup = () => {
     setFormData({ name: '', email: '', password: '', confirmPassword: '' });
     setShowAddPopup(true);
   };
 
-  const addVoter = () => {
-    if (!formData.name || !formData.email || !formData.password || !formData.confirmPassword) {
-      return alert('Please fill in all fields');
+  /* ================= ADD VOTER =================*/
+
+  const addVoter = async () => {
+    const { name, email, password, confirmPassword } = formData;
+
+    if (!name || !email || !password || !confirmPassword)
+      return alert("Please fill in all fields");
+
+    if (password !== confirmPassword)
+      return alert("Passwords do not match");
+
+    setIsRegistering(true);
+
+    try {
+      // HASH PASSWORD
+      const hashedPassword = await bcrypt.hash(password, 10);
+
+      // INSERT INTO DATABASE
+      const { error } = await supabase.from("voters").insert({
+        full_name: name,
+        email,
+        password: hashedPassword,
+        has_voted: false,
+      });
+
+      // ✅ HANDLE DUPLICATE EMAIL
+      if (error) {
+        if (error.code === "23505") {
+          alert("A voter with this email already exists");
+        } else {
+          alert(error.message);
+        }
+        return;
+      }
+
+      alert("Voter added successfully");
+
+      setShowAddPopup(false);
+      setFormData({ name: "", email: "", password: "", confirmPassword: "" });
+      fetchVoters();
+
+    } finally {
+      setIsRegistering(false);
     }
-
-    if (formData.password !== formData.confirmPassword) {
-      return alert('Passwords do not match');
-    }
-
-    // Password strength validation
-    const password = formData.password;
-    const uppercase = /[A-Z]/.test(password);
-    const lowercase = /[a-z]/.test(password);
-    const number = /[0-9]/.test(password);
-    const specialChar = /[!@#$%^&*]/.test(password);
-
-    if (!uppercase || !lowercase || !number || !specialChar) {
-      return alert('Password must contain uppercase, lowercase, number, and special character (!@#$%^&*)');
-    }
-
-    const newVoter = {
-      name: formData.name,
-      email: formData.email,
-      voterId: 'VTR' + String(mockVoters.length + 1).padStart(3, '0'),
-      status: 'Not Voted',
-      password: formData.password // stored but not shown in table
-    };
-
-    setMockVoters(prev => [...prev, newVoter]);
-    setShowAddPopup(false);
   };
 
+
+  /* ================= EDIT ================= */
   const openEditPopup = voter => {
     setSelectedVoter(voter);
     setFormData({ name: voter.name, email: voter.email, password: '', confirmPassword: '' });
     setShowEditPopup(true);
   };
 
-  const saveEditVoter = () => {
-    if (!formData.name || !formData.email) return alert('Please fill in all fields');
-    setMockVoters(prev =>
-      prev.map(v =>
-        v.voterId === selectedVoter.voterId ? { ...v, name: formData.name, email: formData.email } : v
-      )
-    );
-    setShowEditPopup(false);
-    setSelectedVoter(null);
+  const saveEditVoter = async () => {
+    if (!formData.name || !formData.email)
+      return alert("Please fill in all fields");
+
+    try {
+      const { error } = await supabase
+        .from("voters")
+        .update({
+          full_name: formData.name,
+          email: formData.email,
+        })
+        .eq("id", selectedVoter.id);
+
+      if (error) {
+        if (error.code === "23505") {
+          alert("Another voter already uses this email");
+        } else {
+          alert(error.message);
+        }
+        return;
+      }
+
+      alert("Voter updated successfully");
+
+      setShowEditPopup(false);
+      setSelectedVoter(null);
+      fetchVoters();
+
+    } catch {
+      alert("Failed to update voter");
+    }
   };
 
+
+  /* ================= DELETE ================= */
   const openDeletePopup = voter => {
     setSelectedVoter(voter);
     setShowDeletePopup(true);
   };
 
-  const deleteVoter = () => {
-    setMockVoters(prev => prev.filter(v => v.voterId !== selectedVoter.voterId));
+  const deleteVoter = async () => {
+    if (!selectedVoter?.id) {
+      alert("No voter selected");
+      return;
+    }
+
+    const { error } = await supabase
+      .from("voters")
+      .delete()
+      .eq("id", selectedVoter.id);
+
+    if (error) {
+      alert(error.message);
+      return;
+    }
+
+    alert("Voter deleted successfully");
+
     setShowDeletePopup(false);
     setSelectedVoter(null);
+    fetchVoters();
   };
+
 
   const closePopups = () => {
     setShowAddPopup(false);
@@ -125,211 +211,316 @@ function Voters() {
   };
 
   return (
-    <div className='pb-6 px-4 sm:px-6 md:px-10'>
+    <div className='pb-6 px-4 sm:px-6 md:px-10 min-h-screen  dark:bg-slate-950'>
+      
       {/* Header */}
       <div className='mb-6 text-center sm:text-left'>
         <h2 className='text-2xl font-bold text-slate-800 dark:text-white'>Voters</h2>
-        <p className='text-sm text-slate-500 dark:text-slate-400'>Manage and view all registered voters.</p>
+        <p className='text-sm text-slate-500 dark:text-slate-400'>
+          Manage and view all registered voters.
+        </p>
       </div>
 
-      {/* Stats */}
-      <div className='grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6 mb-6'>
+      {/* Stats - Responsive Grid */}
+      <div className='grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 sm:gap-6 mb-6'>
         <StatCard icon={<Users className='w-6 h-6 text-blue-600' />} label="Registered Voters" count={total} />
         <StatCard icon={<CheckCircle className='w-6 h-6 text-green-600' />} label="Voted" count={voted} />
         <StatCard icon={<XCircle className='w-6 h-6 text-red-600' />} label="Not Voted" count={notVoted} />
       </div>
 
-      {/* Search */}
-      <div className='w-full max-w-md mb-6 mx-auto sm:mx-0'>
-        <div className='relative'>
+      {/* Controls: Search & Add - Responsive Flex */}
+      <div className='flex flex-col sm:flex-row gap-4 mb-6 items-center justify-between'>
+        <div className='w-full sm:max-w-md relative'>
+          <Search className='w-5 h-5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2' />
           <input
             type='text'
             placeholder='Search voters...'
+            value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className='w-full pl-10 pr-4 py-2 rounded-lg border border-slate-300 bg-white dark:bg-slate-800 text-slate-800 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 transition'
+            className='w-full pl-10 pr-4 py-2.5 rounded-lg border border-slate-300 bg-white dark:bg-slate-800 text-slate-800 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 transition'
           />
         </div>
-      </div>
-
-      {/* Title & Button */}
-      <div className='flex flex-col sm:flex-row items-center justify-between mb-4 gap-3'>
-        <h3 className='text-lg font-semibold text-slate-800 dark:text-white'>Voter List</h3>
+        
         <button
-          className='bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium py-2 px-4 rounded-lg shadow-md transition w-full sm:w-auto'
+          className='w-full sm:w-auto bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium py-2.5 px-6 rounded-lg shadow-md transition flex items-center justify-center'
           onClick={openAddPopup}
         >
           + Add Voter
         </button>
       </div>
 
-      {/* Table */}
-      <div className='overflow-x-auto'>
-        <table className='hidden sm:table min-w-full border border-slate-200 dark:border-slate-700 rounded-lg'>
-          <thead className='bg-slate-200 dark:bg-slate-800'>
-            <tr>
-              <TableHead>Name</TableHead>
-              <TableHead>Email</TableHead>
-              <TableHead>Voter ID</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead>Actions</TableHead>
-            </tr>
-          </thead>
-          <tbody className='divide-y divide-slate-200 dark:divide-slate-700 text-sm bg-white dark:bg-slate-900'>
-            {mockVoters.map((voter, idx) => (
-              <tr key={idx}>
-                <td className='px-4 py-3'>{voter.name}</td>
-                <td className='px-4 py-3 break-all'>{voter.email}</td>
-                <td className='px-4 py-3'>{voter.voterId}</td>
-                <td className='px-4 py-3'>
-                  <span className={`inline-block ${voter.status === 'Voted' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'} text-xs font-semibold px-2 py-1 rounded-full`}>
+      {/* Empty State */}
+      {currentVoters.length === 0 ? (
+        <div className="text-center py-12 bg-white dark:bg-slate-900 rounded-xl border border-slate-100 dark:border-slate-800">
+          <p className="text-slate-500">No voters found matching your search.</p>
+        </div>
+      ) : (
+        <>
+          {/* 📱 MOBILE CARD VIEW (Visible only on small screens) */}
+          <div className="sm:hidden space-y-4">
+            {currentVoters.map((voter, idx) => (
+              <div 
+                key={voter.id || idx} 
+                className="bg-white dark:bg-slate-900 p-4 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 flex flex-col gap-4"
+              >
+                {/* Top Section: Name & Status */}
+                <div className="flex justify-between items-start">
+                  <div className="flex-1 min-w-0">
+                    <h3 className="font-bold text-slate-900 dark:text-white truncate">{voter.name}</h3>
+                    <p className="text-sm text-slate-500 dark:text-slate-400 truncate">{voter.email}</p>
+                  </div>
+                  <span className={`shrink-0 text-xs font-bold px-2.5 py-1 rounded-full ${
+                      voter.status === 'Voted'
+                        ? 'bg-green-100 text-green-800'
+                        : 'bg-red-100 text-red-800'
+                    }`}>
                     {voter.status}
                   </span>
-                </td>
-                <td className='px-4 py-3 flex space-x-2'>
-                  <button onClick={() => openEditPopup(voter)} className='text-blue-600 hover:text-blue-800'>
-                    <Pencil className='w-4 h-4' />
+                </div>
+
+                {/* Bottom Section: Actions */}
+                <div className="flex justify-end gap-3 pt-3 border-t border-slate-100 dark:border-slate-800 mt-1">
+                  <button 
+                    onClick={() => openEditPopup(voter)} 
+                    className="flex items-center gap-1 text-sm text-blue-600 font-medium px-3 py-1.5 rounded-lg hover:bg-blue-50 dark:hover:bg-blue-900/20 transition"
+                  >
+                    <Pencil size={16} /> Edit
                   </button>
-                  <button onClick={() => openDeletePopup(voter)} className='text-red-600 hover:text-red-800'>
-                    <Trash2 className='w-4 h-4' />
+                  <button 
+                    onClick={() => openDeletePopup(voter)} 
+                    className="flex items-center gap-1 text-sm text-red-600 font-medium px-3 py-1.5 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 transition"
+                  >
+                    <Trash2 size={16} /> Delete
                   </button>
-                </td>
-              </tr>
+                </div>
+              </div>
             ))}
-          </tbody>
-        </table>
-      </div>
+          </div>
 
-      {/* Add Popup */}
+          {/* 🖥️ DESKTOP TABLE VIEW (Visible on medium+ screens) */}
+          <div className='hidden sm:block overflow-x-auto rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900'>
+            <table className='min-w-full text-sm md:text-base border-collapse'>
+              <thead className='bg-slate-100 dark:bg-slate-800'>
+                <tr>
+                  <TableHead>Name</TableHead>
+                  <TableHead>Email</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Actions</TableHead>
+                </tr>
+              </thead>
+              <tbody className='divide-y divide-slate-200 dark:divide-slate-700'>
+                {currentVoters.map((voter, idx) => (
+                  <tr key={voter.id || idx} className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition">
+                    <td className='px-4 py-3 font-medium text-slate-800 dark:text-white'>{voter.name}</td>
+                    <td className='px-4 py-3 text-slate-600 dark:text-slate-400 break-all'>{voter.email}</td>
+                    <td className='px-4 py-3'>
+                      <span className={`inline-block ${
+                        voter.status === 'Voted'
+                          ? 'bg-green-100 text-green-800'
+                          : 'bg-red-100 text-red-800'
+                      } text-xs font-semibold px-2.5 py-1 rounded-full`}>
+                        {voter.status}
+                      </span>
+                    </td>
+                    <td className='px-4 py-3'>
+                      <div className='flex items-center gap-3'>
+                        <button onClick={() => openEditPopup(voter)} className='text-blue-600 hover:text-blue-800 dark:hover:text-blue-400 transition-colors p-1'>
+                          <Pencil className='w-4 h-4' />
+                        </button>
+                        <button onClick={() => openDeletePopup(voter)} className='text-red-600 hover:text-red-800 dark:hover:text-red-400 transition-colors p-1'>
+                          <Trash2 className='w-4 h-4' />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          {/* PAGINATION CONTROLS */}
+          {totalPages > 1 && (
+            <div className="flex justify-between items-center mt-6 px-2 sm:px-0">
+              <button
+                onClick={() => setCurrentPage(p => Math.max(p - 1, 1))}
+                disabled={currentPage === 1}
+                className="flex items-center gap-1 px-3 py-1.5 rounded-lg border border-slate-300 dark:border-slate-600 disabled:opacity-50 disabled:cursor-not-allowed text-sm hover:bg-slate-50 dark:hover:bg-slate-800 transition"
+              >
+                <ChevronLeft size={16} /> Previous
+              </button>
+              
+              <span className="text-sm text-slate-600 dark:text-slate-400 font-medium">
+                Page {currentPage} of {totalPages}
+              </span>
+
+              <button
+                onClick={() => setCurrentPage(p => Math.min(p + 1, totalPages))}
+                disabled={currentPage === totalPages}
+                className="flex items-center gap-1 px-3 py-1.5 rounded-lg border border-slate-300 dark:border-slate-600 disabled:opacity-50 disabled:cursor-not-allowed text-sm hover:bg-slate-50 dark:hover:bg-slate-800 transition"
+              >
+                Next <ChevronRight size={16} />
+              </button>
+            </div>
+          )}
+        </>
+      )}
+
+      {/* ADD POPUP */}
       {showAddPopup && (
-        <VoterPopup
-          title="Add New Voter"
-          formData={formData}
-          handleChange={handleFormChange}
-          onClose={closePopups}
-          onSubmit={addVoter}
-          submitLabel="Add"
-          includePassword
-          showPassword={showPassword}
-          setShowPassword={setShowPassword}
-          showConfirmPassword={showConfirmPassword}
-          setShowConfirmPassword={setShowConfirmPassword}
-        />
+        <Popup title="Add New Voter" onClose={closePopups}>
+          <form
+            onSubmit={e => {
+              e.preventDefault();
+              addVoter();
+            }}
+            className='space-y-4'
+          >
+            <InputField label="Full Name" name="name" value={formData.name} onChange={handleFormChange} />
+            <InputField label="Email" name="email" type="email" value={formData.email} onChange={handleFormChange} />
+            <PasswordField
+              label="Password"
+              name="password"
+              value={formData.password}
+              onChange={handleFormChange}
+              show={showPassword}
+              toggleShow={() => setShowPassword(p => !p)}
+            />
+            <PasswordField
+              label="Confirm Password"
+              name="confirmPassword"
+              value={formData.confirmPassword}
+              onChange={handleFormChange}
+              show={showConfirmPassword}
+              toggleShow={() => setShowConfirmPassword(p => !p)}
+            />
+
+            <button
+              type="submit"
+              disabled={isRegistering}
+              className="w-full py-3 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white transition font-medium disabled:opacity-70 flex items-center justify-center gap-2"
+            >
+              {isRegistering ? (
+                <>
+                  <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-0 8 8 0 0118 0z"></path>
+                  </svg>
+                  Registering...
+                </>
+              ) : (
+                'Register'
+              )}
+            </button>
+          </form>
+        </Popup>
       )}
 
-      {/* Edit Popup */}
+      {/* EDIT POPUP */}
       {showEditPopup && (
-        <VoterPopup
-          title="Edit Voter"
-          formData={formData}
-          handleChange={handleFormChange}
-          onClose={closePopups}
-          onSubmit={saveEditVoter}
-          submitLabel="Save"
-        />
+        <Popup title="Edit Voter" onClose={closePopups}>
+          <form
+            onSubmit={e => {
+              e.preventDefault();
+              saveEditVoter();
+            }}
+            className="space-y-4"
+          >
+            <InputField label="Full Name" name="name" value={formData.name} onChange={handleFormChange} />
+            <InputField label="Email" name="email" type="email" value={formData.email} onChange={handleFormChange} />
+            <button className="w-full py-3 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white transition font-medium flex items-center justify-center">
+              Save Changes
+            </button>
+          </form>
+        </Popup>
       )}
 
-      {/* Delete Popup */}
+      {/* DELETE POPUP */}
       {showDeletePopup && (
         <Popup title="Confirm Delete" onClose={closePopups}>
-          <p className="mb-4">Are you sure you want to delete voter <strong>{selectedVoter?.name}</strong>?</p>
-          <div className="flex justify-end space-x-2">
-            <button onClick={closePopups} className="btn-cancel rounded-lg px-4 py-2 font-semibold transition hover:bg-blue-100">Cancel</button>
-            <button onClick={deleteVoter} className="btn-submit rounded-lg px-4 py-2 font-semibold transition hover:bg-blue-700">Delete</button>
-          </div>
+          <p className="mb-4 text-sm text-slate-600 dark:text-slate-300">
+            Are you sure you want to delete <strong className="text-slate-900 dark:text-white">{selectedVoter?.name}</strong>?
+          </p>
+          <button
+            onClick={deleteVoter}
+            className="w-full py-3 rounded-lg bg-red-600 hover:bg-red-700 text-white transition font-medium"
+          >
+            Delete
+          </button>
         </Popup>
       )}
     </div>
   );
 }
 
-// Components
+/* ===== COMPONENTS ===== */
+
 function StatCard({ icon, label, count }) {
   return (
-    <div className='bg-white dark:bg-slate-900 shadow-md rounded-2xl p-6 flex items-center space-x-4 hover:shadow-lg transition'>
-      <div className='bg-blue-100 dark:bg-blue-800 p-3 rounded-full'>{icon}</div>
-      <div>
-        <p className='text-sm text-slate-500 dark:text-slate-400'>{label}</p>
-        <h3 className='text-xl font-bold text-slate-800 dark:text-white'>{count}</h3>
+    <div className='bg-white dark:bg-slate-900 shadow-sm sm:shadow-md rounded-xl p-4 sm:p-6 flex items-center space-x-4 hover:shadow-lg transition border border-slate-100 dark:border-slate-800'>
+      <div className='bg-blue-100 dark:bg-blue-900/30 p-2.5 sm:p-3 rounded-full shrink-0'>{icon}</div>
+      <div className="min-w-0">
+        <p className='text-xs sm:text-sm text-slate-500 dark:text-slate-400 font-medium'>{label}</p>
+        <h3 className='text-lg sm:text-xl font-bold text-slate-800 dark:text-white'>{count}</h3>
       </div>
     </div>
   );
 }
 
 function TableHead({ children }) {
-  return <th className='px-4 py-3 text-sm font-bold uppercase tracking-wider text-slate-600 dark:text-slate-300'>{children}</th>;
+  return (
+    <th className='px-4 py-3 text-left text-xs sm:text-sm font-bold uppercase tracking-wider text-slate-600 dark:text-slate-300'>
+      {children}
+    </th>
+  );
 }
 
-function VoterPopup({ title, formData, handleChange, onClose, onSubmit, submitLabel, includePassword, showPassword, setShowPassword, showConfirmPassword, setShowConfirmPassword }) {
+function InputField({ label, name, type = 'text', value, onChange }) {
   return (
-    <Popup title={title} onClose={onClose}>
-      <form
-        onSubmit={e => { e.preventDefault(); onSubmit(); }}
-        className='space-y-4'
-      >
-        <InputField label="Full Name" name="name" value={formData.name} onChange={handleChange} />
-        <InputField label="Email" name="email" type="email" value={formData.email} onChange={handleChange} />
-
-        {includePassword && (
-          <>
-            <PasswordField label="Password" name="password" value={formData.password} onChange={handleChange} show={showPassword} toggleShow={() => setShowPassword(prev => !prev)} />
-            <PasswordField label="Confirm Password" name="confirmPassword" value={formData.confirmPassword} onChange={handleChange} show={showConfirmPassword} toggleShow={() => setShowConfirmPassword(prev => !prev)} />
-          </>
-        )}
-
-        <div className="flex justify-end space-x-2">
-          <button type="button" onClick={onClose} className="btn-cancel rounded-lg px-4 py-2 font-semibold transition hover:bg-blue-100">Cancel</button>
-          <button type="submit" className="btn-submit rounded-lg px-4 py-2 font-semibold transition hover:bg-blue-700">{submitLabel}</button>
-        </div>
-      </form>
-    </Popup>
+    <div>
+      <label className='block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5'>{label}</label>
+      <input
+        type={type}
+        name={name}
+        value={value}
+        onChange={onChange}
+        className='w-full rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 
+        text-slate-800 dark:text-white px-3.5 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500 transition'
+      />
+    </div>
   );
 }
 
 function PasswordField({ label, name, value, onChange, show, toggleShow }) {
   return (
-    <div className="relative">
-      <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">{label}</label>
+    <div className='relative'>
+      <label className='block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5'>{label}</label>
       <input
-        type={show ? "text" : "password"}
+        type={show ? 'text' : 'password'}
         name={name}
         value={value}
         onChange={onChange}
-        className='w-full rounded-md border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-800 dark:text-white px-3 py-2 pr-10 focus:outline-none focus:ring-2 focus:ring-blue-500 transition'
+        className='w-full rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 
+        text-slate-800 dark:text-white px-3.5 py-2.5 pr-10 focus:outline-none focus:ring-2 focus:ring-blue-500 transition'
       />
-      <span className="absolute right-3 top-1/2 -translate-y-1/2 cursor-pointer text-slate-500" onClick={toggleShow}>
+      <span className='absolute right-3.5 top-9 sm:top-9 cursor-pointer text-slate-500' onClick={toggleShow}>
         {show ? <EyeOff size={18} /> : <Eye size={18} />}
       </span>
     </div>
   );
 }
 
-function InputField({ label, name, type = "text", value, onChange }) {
-  return (
-    <div>
-      <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">{label}</label>
-      <input type={type} name={name} value={value} onChange={onChange} className='w-full rounded-md border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-800 dark:text-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 transition' />
-    </div>
-  );
-}
-
 function Popup({ title, children, onClose }) {
   return (
-    <div className='fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50 p-4'>
-      <div className='bg-white dark:bg-slate-900 rounded-lg shadow-lg max-w-md w-full p-6 relative'>
-        <h2 className='text-xl font-semibold mb-4 text-slate-800 dark:text-white'>{title}</h2>
+    <div className='fixed inset-0 bg-black/40 bg-opacity-40 flex items-center justify-center z-50 p-4'>
+      <div className='bg-white dark:bg-slate-900 rounded-xl shadow-2xl max-w-md w-full p-6 relative animate-in fade-in duration-200'>
+        <h2 className='text-xl font-bold mb-5 text-slate-800 dark:text-white pr-6'>{title}</h2>
         {children}
-        <button onClick={onClose} className='absolute top-3 right-3 text-slate-500 hover:text-slate-700'>&times;</button>
+        <button onClick={onClose} className='absolute top-4 right-4 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition'>
+          &times;
+        </button>
       </div>
     </div>
   );
 }
-
-// Buttons CSS
-const btnStyles = `
-.btn-cancel { background: #e0f2fe; color:#2563eb; padding:0.5rem 1rem; border-radius:0.5rem; font-weight:600; cursor:pointer; }
-.btn-cancel:hover { background: #bae6fd; }
-.btn-submit { background:#2563eb; color:white; padding:0.5rem 1rem; border-radius:0.5rem; font-weight:600; cursor:pointer; }
-.btn-submit:hover { background:#1e40af; }
-`;
 
 export default Voters;

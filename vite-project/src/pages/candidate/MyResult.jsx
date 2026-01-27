@@ -38,7 +38,7 @@ function MyResult() {
 
   if (!resultsPublished) {
     return (
-      <div className="p-6 bg-slate-50 min-h-screen flex items-center justify-center">
+      <div className="p-6  min-h-screen flex items-center justify-center">
         <div className="max-w-md mx-auto">
           <div className="bg-white rounded-2xl shadow-xl p-8 text-center">
             <div className="mb-6">

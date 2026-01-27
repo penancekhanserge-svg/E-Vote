@@ -41,13 +41,7 @@ const Sidebar = ({ isCollapsed }) => {
       color: "text-purple-500",
       textSize: "text-lg"
     },
-    { 
-      name: "About", 
-      path: "/candidate-dashboard/about", 
-      icon: <Info className="h-5 w-5 text-sky-500" />,
-      color: "text-orange-500",
-      textSize: "text-lg"
-    },
+    
     { 
       name: "Help", 
       path: "/candidate-dashboard/help", 
@@ -55,17 +49,11 @@ const Sidebar = ({ isCollapsed }) => {
       color: "text-teal-500",
       textSize: "text-lg"
     },
-    { 
-      name: "Settings", 
-      path: "/candidate-dashboard/settings", 
-      icon: <Settings className="h-5 w-5 text-gray-600" />,
-      color: "text-red-500",
-      textSize: "text-lg"
-    },
+    
   ];
 
   return (
-    <div className={`${isCollapsed ? 'w-20' : 'w-64'} bg-gradient-to-b from-white to-gray-50 shadow-xl flex flex-col border-r border-gray-100 transition-all duration-300 ease-in-out`}>
+    <div className={`${isCollapsed ? 'w-20' : 'w-52'} bg-gradient-to-b from-white to-gray-50 shadow-xl flex flex-col border-r border-gray-100 transition-all duration-300 ease-in-out`}>
       {/* Logo Section */}
       <div className="p-6 flex items-center space-x-3 border-b border-gray-100">
         <img src="/vote3.png" alt="logo" className="h-10 w-10 rounded-lg shadow-sm" />
@@ -99,15 +87,21 @@ const Sidebar = ({ isCollapsed }) => {
       </nav>
 
       {/* Logout Button */}
-      <div className={`${isCollapsed ? 'p-4' : 'p-6'} border-t border-gray-100`}>
-        <NavLink
-          to="/auth/login"
-          className={`flex items-center ${isCollapsed ? 'justify-center' : 'space-x-3'} px-4 py-3 rounded-xl font-medium text-red-500 hover:bg-red-100 hover:text-red-600 transition-all duration-200 ease-in-out transform hover:scale-[1.02]`}
-        >
-          <LogOut className="h-6 w-6" />
-          {!isCollapsed && <span className="text-lg font-medium">Sign Out</span>}
-        </NavLink>
-      </div>
+      <div className={`${isCollapsed ? "p-4" : "p-6"} border-t border-gray-100`}>
+  <button
+    onClick={() => {
+      localStorage.clear();
+      window.location.href = "/auth/login";
+    }}
+    className={`flex items-center w-full ${
+      isCollapsed ? "justify-center" : "space-x-3"
+    } px-4 py-3 rounded-xl font-medium text-red-500 hover:bg-red-100 hover:text-red-600 transition-all duration-200 ease-in-out transform hover:scale-[1.02]`}
+  >
+    <LogOut className="h-6 w-6" />
+    {!isCollapsed && <span className="text-lg font-medium">Sign Out</span>}
+  </button>
+</div>
+
     </div>
   );
 };

@@ -1,29 +1,111 @@
-import React, { useState } from 'react';
-import { Save, User } from 'lucide-react';
+import React, { useEffect, useState } from "react";
+import { Save, User } from "lucide-react";
+import { supabase } from "../../supabaseClient";
+import { toast, ToastContainer } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 
 function SettingsPage() {
+  const voterId = localStorage.getItem("voterId");
+
   const [formData, setFormData] = useState({
-    fullName: 'John Doe',
-    email: 'john.doe@example.com',
+    fullName: "",
+    email: "",
   });
 
+  const [loading, setLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
 
+  /* ───────── LOAD VOTER PROFILE ───────── */
+  useEffect(() => {
+    const loadProfile = async () => {
+      if (!voterId) {
+        toast.error("Your session may be inactive. Changes cannot be saved.");
+        setLoading(false);
+        return;
+      }
+
+      const { data, error } = await supabase
+        .from("voters")
+        .select("full_name, email")
+        .eq("id", voterId)
+        .single();
+
+      if (error || !data) {
+        toast.error("Unable to verify your session. Editing is allowed, saving is disabled.");
+        setLoading(false);
+        return;
+      }
+
+      setFormData({
+        fullName: data.full_name,
+        email: data.email,
+      });
+
+      setLoading(false);
+    };
+
+    loadProfile();
+  }, [voterId]);
+
+  /* ───────── SAVE PROFILE ───────── */
   const handleSave = async () => {
-    setIsSaving(true);
-    // Simulate API call
-    setTimeout(() => {
-      alert('Your information has been updated successfully!');
+    if (!voterId) {
+      toast.error("Session missing. Please log in again to save changes.");
+      return;
+    }
+
+    if (!formData.fullName.trim() || !formData.email.trim()) {
+      toast.error("Full name and email are required.");
+      return;
+    }
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(formData.email)) {
+      toast.error("Please enter a valid email address.");
+      return;
+    }
+
+    try {
+      setIsSaving(true);
+
+      const { error } = await supabase
+        .from("voters")
+        .update({
+          full_name: formData.fullName.trim(),
+          email: formData.email.trim(),
+        })
+        .eq("id", voterId);
+
+      if (error) {
+        toast.error("Failed to save changes. Please try again.");
+        return;
+      }
+
+      localStorage.setItem("userName", formData.fullName);
+      toast.success("Changes saved successfully.");
+    } catch {
+      toast.error("Unexpected error occurred.");
+    } finally {
       setIsSaving(false);
-    }, 1000);
+    }
   };
 
+  /* ───────── LOADING ───────── */
+  if (loading) {
+    return <div className="p-8 text-gray-500">Loading profile…</div>;
+  }
+
+  /* ───────── UI ───────── */
   return (
     <div className="min-h-screen">
-      <div className="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="mb-8">
-          <h1 className="text-2xl font-bold text-gray-900">Update Your Information</h1>
-          <p className="mt-2 text-gray-600">Keep your profile information up to date</p>
+      <div className="max-w-2xl mx-auto px-4 py-8">
+        <div className="mb-8 text-center">
+          <h1 className="text-2xl font-bold text-gray-900">
+            Update Your Information
+          </h1>
+          <p className="mt-2 text-gray-600">
+            Keep your profile information up to date
+          </p>
         </div>
 
         <div className="bg-white rounded-lg shadow-sm">
@@ -41,9 +123,10 @@ function SettingsPage() {
                 <input
                   type="text"
                   value={formData.fullName}
-                  onChange={(e) => setFormData({...formData, fullName: e.target.value})}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                  placeholder="Enter your full name"
+                  onChange={(e) =>
+                    setFormData({ ...formData, fullName: e.target.value })
+                  }
+                  className="w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-indigo-500"
                 />
               </div>
 
@@ -54,9 +137,10 @@ function SettingsPage() {
                 <input
                   type="email"
                   value={formData.email}
-                  onChange={(e) => setFormData({...formData, email: e.target.value})}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                  placeholder="your.email@example.com"
+                  onChange={(e) =>
+                    setFormData({ ...formData, email: e.target.value })
+                  }
+                  className="w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-indigo-500"
                 />
               </div>
             </div>
@@ -65,15 +149,29 @@ function SettingsPage() {
               <button
                 onClick={handleSave}
                 disabled={isSaving}
-                className="w-full sm:w-auto flex items-center justify-center px-6 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                className="flex items-center px-6 py-2 bg-indigo-600 text-white rounded-md
+                           hover:bg-indigo-700 disabled:opacity-50 transition-colors"
               >
                 <Save className="w-4 h-4 mr-2" />
-                {isSaving ? 'Saving...' : 'Save Changes'}
+                {isSaving ? "Saving..." : "Save Changes"}
               </button>
             </div>
           </div>
         </div>
       </div>
+      
+      <ToastContainer
+        position="top-right"
+        autoClose={3000}
+        hideProgressBar={false}
+        newestOnTop={false}
+        closeOnClick
+        rtl={false}
+        pauseOnFocusLoss
+        draggable
+        pauseOnHover
+        theme="light"
+      />
     </div>
   );
 }
