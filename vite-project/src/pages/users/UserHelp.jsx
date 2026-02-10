@@ -16,34 +16,34 @@ function Support() {
 
   const faqs = [
     {
-      question: 'How do I reset my admin password?',
+      question: 'How do I reset my voter password?',
       answer:
-        'Go to your profile settings and click on "Change Password". Follow the instructions to reset your password.',
+        'Logout to the login page, click “Forgot Password”, enter your registered email, and follow the instructions sent to your inbox to create a new password.',
     },
     {
-      question: 'Can I publish results after submission?',
+      question: 'How do I know if my vote was successfully submitted?',
       answer:
-        'Yes, results can be published anytime unless locked by the system admin.',
+        'After you submit your vote, the system shows a confirmation message on the screen. If you see the confirmation notice, your vote has been securely recorded and cannot be changed.',
     },
     {
-      question: 'How can I reach technical support?',
+      question: 'Can I vote more than once in the same election?',
       answer:
-        'Use the contact form below or email support@electionportal.com.',
+        'No. Each registered voter is allowed to vote only once per election. After your vote is submitted, your account is automatically locked for that election.',
     },
     {
-      question: 'How do I update election details?',
+      question: 'What should I do if I cannot see any active election to vote in?',
       answer:
-        'Navigate to the Election Management panel, select the election, and click "Edit".',
+        'This usually means there is no election currently open for voting, or your voter region/category is not eligible for that election. Check the election dates or contact support for clarification.',
     },
     {
-      question: 'Can I export election results?',
+      question: 'Is my vote anonymous and secure?',
       answer:
-        'You can export election results as PDFs by using the Export PDF button on the results page.',
+        'Yes. Votes are stored securely and are not displayed with your personal identity. The system records that you voted, but not who you voted for.',
     },
     {
-      question: 'How do I add new candidates?',
+      question: 'Can I change my vote after submitting it?',
       answer:
-        'Go to the Election Management panel, select the election, and use the Add Candidate button.',
+        'No. Once a vote is submitted, it is final and cannot be edited or replaced. Please review your selection carefully before confirming your vote.',
     },
   ];
 

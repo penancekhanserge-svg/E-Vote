@@ -2,8 +2,7 @@ import {
   ChevronDown,
   Settings as SettingsIcon,
   LogOut,
-  Moon,
-  Sun,
+  
 } from "lucide-react";
 import React, { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
@@ -53,21 +52,7 @@ function Header({ theme, onToggleTheme }) {
 
         {/* RIGHT */}
         <div className="flex items-center space-x-2 sm:space-x-4">
-          {/* THEME TOGGLE */}
-          <button
-            onClick={onToggleTheme}
-            className="p-2.5 rounded-xl text-slate-600 dark:text-slate-300
-                       hover:bg-slate-100 dark:hover:bg-slate-800
-                       transition-colors"
-            aria-label="Toggle Theme"
-          >
-            {theme === "dark" ? (
-              <Sun className="w-5 h-5" />
-            ) : (
-              <Moon className="w-5 h-5" />
-            )}
-          </button>
-
+          
           {/* PROFILE */}
           <div
             ref={profileRef}

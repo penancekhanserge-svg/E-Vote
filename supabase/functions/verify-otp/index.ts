@@ -20,26 +20,28 @@ const MAX_RESENDS = 3;
 const LOCK_WINDOW_MS = 10 * 60 * 1000; // 10 minutes
 
 // ─────────────────────────────────────────────
+// CORS helper
+// ─────────────────────────────────────────────
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Methods": "POST, OPTIONS",
+  "Access-Control-Allow-Headers": "Content-Type, Authorization",
+};
+
+// ─────────────────────────────────────────────
 // Edge Function
 // ─────────────────────────────────────────────
 Deno.serve(async (req) => {
   // ─────────── CORS ───────────
   if (req.method === "OPTIONS") {
-    return new Response(null, {
-      status: 204,
-      headers: {
-        "Access-Control-Allow-Origin": "*",
-        "Access-Control-Allow-Methods": "POST, OPTIONS",
-        "Access-Control-Allow-Headers": "Content-Type, Authorization",
-      },
-    });
+    return new Response(null, { status: 204, headers: corsHeaders });
   }
 
   if (req.method !== "POST") {
-    return new Response(
-      JSON.stringify({ error: "Method not allowed" }),
-      { status: 405, headers: { "Access-Control-Allow-Origin": "*" } }
-    );
+    return new Response(JSON.stringify({ error: "Method not allowed" }), {
+      status: 405,
+      headers: corsHeaders,
+    });
   }
 
   try {
@@ -47,24 +49,24 @@ Deno.serve(async (req) => {
 
     // ─────────── Validate Input ───────────
     if (!email || !otp) {
-      return new Response(
-        JSON.stringify({ error: "Missing email or OTP" }),
-        { status: 400, headers: { "Access-Control-Allow-Origin": "*" } }
-      );
+      return new Response(JSON.stringify({ error: "Missing email or OTP" }), {
+        status: 400,
+        headers: corsHeaders,
+      });
     }
 
-    // ─────────── Find Pending User ───────────
+    // ─────────── Find Pending User (case-insensitive email) ───────────
     const { data: user, error } = await supabase
       .from("pending_users")
       .select("*")
-      .eq("email", email)
+      .ilike("email", email) // ✅ case-insensitive
       .single();
 
     if (error || !user) {
-      return new Response(
-        JSON.stringify({ error: "User not found" }),
-        { status: 400, headers: { "Access-Control-Allow-Origin": "*" } }
-      );
+      return new Response(JSON.stringify({ error: "User not found" }), {
+        status: 400,
+        headers: corsHeaders,
+      });
     }
 
     // ─────────── 🔒 LOCK VERIFICATION IF RESEND LOCKED ───────────
@@ -77,9 +79,7 @@ Deno.serve(async (req) => {
       const elapsed = Date.now() - lastResendAt;
 
       if (elapsed < LOCK_WINDOW_MS) {
-        const retryAfter = Math.ceil(
-          (LOCK_WINDOW_MS - elapsed) / 1000
-        );
+        const retryAfter = Math.ceil((LOCK_WINDOW_MS - elapsed) / 1000);
 
         return new Response(
           JSON.stringify({
@@ -87,57 +87,98 @@ Deno.serve(async (req) => {
               "OTP verification is temporarily locked. Please wait before retrying.",
             retry_after: retryAfter,
           }),
-          { status: 429, headers: { "Access-Control-Allow-Origin": "*" } }
+          { status: 429, headers: corsHeaders }
         );
       }
     }
 
     // ─────────── Verify OTP ───────────
     if (user.otp_code !== otp) {
-      return new Response(
-        JSON.stringify({ error: "Invalid OTP" }),
-        { status: 400, headers: { "Access-Control-Allow-Origin": "*" } }
-      );
+      return new Response(JSON.stringify({ error: "Invalid OTP" }), {
+        status: 400,
+        headers: corsHeaders,
+      });
     }
 
     // ─────────── Check Expiry ───────────
     if (new Date() > new Date(user.expires_at)) {
-      return new Response(
-        JSON.stringify({ error: "OTP expired" }),
-        { status: 400, headers: { "Access-Control-Allow-Origin": "*" } }
-      );
-    }
-
-    // ─────────── Prevent Duplicate Voters ───────────
-    const { data: existingVoter } = await supabase
-      .from("voters")
-      .select("id")
-      .eq("email", email)
-      .maybeSingle();
-
-    if (!existingVoter) {
-      await supabase.from("voters").insert({
-        full_name: user.full_name,
-        email: user.email,
-        password: user.password,
+      return new Response(JSON.stringify({ error: "OTP expired" }), {
+        status: 400,
+        headers: corsHeaders,
       });
     }
 
+    // ─────────── Prevent Duplicate Voters (case-insensitive) ───────────
+    const { data: existingVoter, error: existingErr } = await supabase
+      .from("voters")
+      .select("id")
+      .ilike("email", email)
+      .maybeSingle();
+
+    if (existingErr) {
+      console.error("CHECK VOTER ERROR:", existingErr);
+      return new Response(JSON.stringify({ error: "Database error" }), {
+        status: 500,
+        headers: corsHeaders,
+      });
+    }
+
+    // ─────────── Insert into voters (✅ INCLUDE region_id & department_id) ───────────
+    if (!existingVoter) {
+      const { error: insertErr } = await supabase.from("voters").insert({
+        full_name: user.full_name,
+        email: user.email,
+        password: user.password,
+        has_voted: false,
+        region_id: user.region_id, // ✅ FIX
+        department_id: user.department_id, // ✅ FIX
+      });
+
+      if (insertErr) {
+        console.error("INSERT VOTER ERROR:", insertErr);
+        return new Response(
+          JSON.stringify({ error: insertErr.message || "Failed to create voter" }),
+          { status: 400, headers: corsHeaders }
+        );
+      }
+    } else {
+      // If voter already exists, but region/department are null, you may want to backfill (optional)
+      // This ensures old records get updated when user verifies again.
+      // NOTE: Only updates if existing values are null.
+      await supabase
+        .from("voters")
+        .update({
+          region_id: user.region_id,
+          department_id: user.department_id,
+        })
+        .eq("id", existingVoter.id)
+        .is("region_id", null);
+    }
+
     // ─────────── Cleanup Pending User ───────────
-    await supabase.from("pending_users").delete().eq("email", email);
+    const { error: delErr } = await supabase
+      .from("pending_users")
+      .delete()
+      .ilike("email", email);
+
+    if (delErr) {
+      console.error("DELETE PENDING ERROR:", delErr);
+      // Not fatal, but log it
+    }
 
     // ─────────── Send PREMIUM Welcome Email ───────────
-    await fetch("https://api.resend.com/emails", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${RESEND_API_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        from: "VoteSecure <no-reply@ballotium.app>",
-        to: email,
-        subject: "Welcome to VoteSecure 🎉",
-        html: `
+    if (RESEND_API_KEY) {
+      const welcomeRes = await fetch("https://api.resend.com/emails", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${RESEND_API_KEY}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          from: "VoteSecure <no-reply@ballotium.app>",
+          to: email,
+          subject: "Welcome to VoteSecure 🎉",
+          html: `
 <!DOCTYPE html>
 <html>
   <body style="margin:0;padding:0;background-color:#f3f4f6;font-family:Segoe UI,Roboto,Helvetica,Arial,sans-serif;">
@@ -210,21 +251,27 @@ Deno.serve(async (req) => {
     </table>
   </body>
 </html>
-        `,
-      }),
-    });
+          `,
+        }),
+      });
+
+      if (!welcomeRes.ok) {
+        const t = await welcomeRes.text();
+        console.error("WELCOME EMAIL ERROR:", t);
+        // Not fatal
+      }
+    }
 
     // ─────────── Success ───────────
-    return new Response(
-      JSON.stringify({ message: "OTP verified successfully" }),
-      { status: 200, headers: { "Access-Control-Allow-Origin": "*" } }
-    );
-
+    return new Response(JSON.stringify({ message: "OTP verified successfully" }), {
+      status: 200,
+      headers: corsHeaders,
+    });
   } catch (err) {
     console.error("VERIFY OTP ERROR:", err);
-    return new Response(
-      JSON.stringify({ error: "Internal server error" }),
-      { status: 500, headers: { "Access-Control-Allow-Origin": "*" } }
-    );
+    return new Response(JSON.stringify({ error: "Internal server error" }), {
+      status: 500,
+      headers: corsHeaders,
+    });
   }
 });

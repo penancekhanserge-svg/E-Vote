@@ -15,29 +15,56 @@ const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY");
 console.log("RESEND_API_KEY exists:", !!RESEND_API_KEY);
 
 // ─────────────────────────────────────────────
+// Helpers
+// ─────────────────────────────────────────────
+function corsHeaders() {
+  return {
+    "Access-Control-Allow-Origin": "*",
+    "Access-Control-Allow-Methods": "POST, OPTIONS",
+    "Access-Control-Allow-Headers": "Content-Type, Authorization",
+  };
+}
+
+// ─────────────────────────────────────────────
 // Edge Function
 // ─────────────────────────────────────────────
 Deno.serve(async (req) => {
   // ─────────── CORS ───────────
   if (req.method === "OPTIONS") {
-    return new Response(null, {
-      status: 204,
-      headers: {
-        "Access-Control-Allow-Origin": "*",
-        "Access-Control-Allow-Methods": "POST, OPTIONS",
-        "Access-Control-Allow-Headers": "Content-Type, Authorization",
-      },
-    });
-  }
+    return new Response(null, { status: 204, headers: corsHeaders() });
+    }
 
   try {
-    const { full_name, email, password } = await req.json();
+    // ✅ now includes region_id & department_id
+    const { full_name, email, password, region_id, department_id } = await req.json();
 
     // ─────────── Validate Input ───────────
-    if (!full_name || !email || !password) {
+    if (!full_name || !email || !password || !region_id || !department_id) {
       return new Response(
         JSON.stringify({ error: "Missing required fields" }),
-        { status: 400, headers: { "Access-Control-Allow-Origin": "*" } }
+        { status: 400, headers: corsHeaders() }
+      );
+    }
+
+    // ─────────── (Optional) Validate region & department exist & match ───────────
+    // This prevents saving random UUIDs
+    const { data: dept, error: deptErr } = await supabase
+      .from("departments")
+      .select("id, region_id")
+      .eq("id", department_id)
+      .maybeSingle();
+
+    if (deptErr || !dept) {
+      return new Response(
+        JSON.stringify({ error: "Invalid department selected" }),
+        { status: 400, headers: corsHeaders() }
+      );
+    }
+
+    if (dept.region_id !== region_id) {
+      return new Response(
+        JSON.stringify({ error: "Department does not belong to selected region" }),
+        { status: 400, headers: corsHeaders() }
       );
     }
 
@@ -53,7 +80,7 @@ Deno.serve(async (req) => {
         JSON.stringify({
           error: "An account with this email already exists. Please log in.",
         }),
-        { status: 409, headers: { "Access-Control-Allow-Origin": "*" } }
+        { status: 409, headers: corsHeaders() }
       );
     }
 
@@ -61,20 +88,26 @@ Deno.serve(async (req) => {
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
     const expires_at = new Date(Date.now() + 10 * 60 * 1000).toISOString();
 
-    // ─────────── Insert into pending_users ───────────
-    const { error: dbError } = await supabase.from("pending_users").insert({
-      full_name,
-      email,
-      password,
-      otp_code: otp,
-      expires_at,
-    });
+    // ─────────── Upsert/Insert into pending_users ───────────
+    // If user requests OTP again, overwrite otp_code + expires_at (and keep latest region/department)
+    const { error: dbError } = await supabase.from("pending_users").upsert(
+      {
+        email,
+        full_name,
+        password,
+        region_id,
+        department_id,
+        otp_code: otp,
+        expires_at,
+      },
+      { onConflict: "email" }
+    );
 
     if (dbError) {
       console.error("DB ERROR:", dbError);
       return new Response(
         JSON.stringify({ error: "Database error" }),
-        { status: 400, headers: { "Access-Control-Allow-Origin": "*" } }
+        { status: 400, headers: corsHeaders() }
       );
     }
 
@@ -98,19 +131,13 @@ Deno.serve(async (req) => {
         <td align="center">
           <table width="600" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:12px;box-shadow:0 8px 24px rgba(0,0,0,0.08);overflow:hidden;">
             
-            <!-- Header -->
             <tr>
               <td style="background:#1f2937;padding:24px;text-align:center;">
-                <h1 style="color:#ffffff;margin:0;font-size:24px;letter-spacing:1px;">
-                  VoteSecure
-                </h1>
-                <p style="color:#d1d5db;margin:8px 0 0;font-size:14px;">
-                  Secure Digital Voting Platform
-                </p>
+                <h1 style="color:#ffffff;margin:0;font-size:24px;letter-spacing:1px;">VoteSecure</h1>
+                <p style="color:#d1d5db;margin:8px 0 0;font-size:14px;">Secure Digital Voting Platform</p>
               </td>
             </tr>
 
-            <!-- Body -->
             <tr>
               <td style="padding:32px;color:#374151;">
                 <p style="font-size:16px;margin:0 0 12px;">
@@ -119,11 +146,9 @@ Deno.serve(async (req) => {
 
                 <p style="font-size:15px;line-height:1.6;margin:0 0 20px;">
                   Thank you for registering with <strong>VoteSecure</strong>.
-                  To complete your account setup and ensure the security of your profile,
-                  please use the verification code below.
+                  Please use the verification code below to complete your registration.
                 </p>
 
-                <!-- OTP Box -->
                 <div style="text-align:center;margin:32px 0;">
                   <div style="display:inline-block;padding:18px 36px;
                     font-size:30px;font-weight:700;letter-spacing:8px;
@@ -144,7 +169,6 @@ Deno.serve(async (req) => {
               </td>
             </tr>
 
-            <!-- Footer -->
             <tr>
               <td style="background:#f9fafb;padding:20px;text-align:center;border-top:1px solid #e5e7eb;">
                 <p style="font-size:12px;color:#9ca3af;margin:0;">
@@ -171,21 +195,19 @@ Deno.serve(async (req) => {
       console.error("RESEND ERROR:", resendText);
       return new Response(
         JSON.stringify({ error: "Failed to send OTP email" }),
-        { status: 500, headers: { "Access-Control-Allow-Origin": "*" } }
+        { status: 500, headers: corsHeaders() }
       );
     }
 
-    // ─────────── Success ───────────
     return new Response(
       JSON.stringify({ message: "OTP sent successfully" }),
-      { status: 200, headers: { "Access-Control-Allow-Origin": "*" } }
+      { status: 200, headers: corsHeaders() }
     );
-
   } catch (err: any) {
     console.error("RUNTIME ERROR:", err);
     return new Response(
       JSON.stringify({ error: err.message || "Internal server error" }),
-      { status: 500, headers: { "Access-Control-Allow-Origin": "*" } }
+      { status: 500, headers: corsHeaders() }
     );
   }
 });

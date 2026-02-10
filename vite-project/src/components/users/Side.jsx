@@ -38,7 +38,7 @@ const Sidebar = ({ isCollapsed }) => {
       
       {/* Logo Section */}
       <div className="p-6 flex items-center space-x-3 border-b border-gray-100">
-        <img src="/vote3.png" alt="logo" className="h-10 w-10 rounded-lg shadow-sm" />
+        <img src="/logo2.png" alt="logo" className="h-10 w-10 rounded-lg shadow-sm" />
         {!collapsed && <span className="font-bold text-xl text-gray-800 tracking-tight">VoteSecure</span>}
       </div>
 

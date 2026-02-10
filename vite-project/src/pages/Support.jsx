@@ -18,17 +18,17 @@ function Support() {
     {
       question: 'How do I reset my admin password?',
       answer:
-        'Go to your profile settings and click on "Change Password". Follow the instructions to reset your password.',
+        'Logout to the login page, click “Forgot Password”, and follow the instructions to reset your password.',
     },
     {
-      question: 'Can I publish results after submission?',
+      question: 'Can I publish results after Elections are over?',
       answer:
-        'Yes, results can be published anytime unless locked by the system admin.',
+        'Yes, results can be published anytime unless not completed.',
     },
     {
       question: 'How can I reach technical support?',
       answer:
-        'Use the contact form below or email support@electionportal.com.',
+        'Use the contact form below ',
     },
     {
       question: 'How do I update election details?',
@@ -36,14 +36,14 @@ function Support() {
         'Navigate to the Election Management panel, select the election, and click "Edit".',
     },
     {
-      question: 'Can I export election results?',
+      question: 'Can I print election results?',
       answer:
-        'You can export election results as PDFs by using the Export PDF button on the results page.',
+        'You can print election results as PDFs by using the print button on the results page.',
     },
     {
       question: 'How do I add new candidates?',
       answer:
-        'Go to the Election Management panel, select the election, and use the Add Candidate button.',
+        'Go to the candidate Management panel and use the Add Candidate button.',
     },
   ];
 

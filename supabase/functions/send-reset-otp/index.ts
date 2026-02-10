@@ -55,7 +55,14 @@ Deno.serve(async (req) => {
       .eq("email", email)
       .maybeSingle();
 
-    if (!voter && !admin) {
+
+    const { data: candidate } = await supabase
+      .from("candidates")
+      .select("id")
+      .eq("email", email)
+      .maybeSingle();
+
+    if (!voter && !admin && !candidate) {
       return new Response(
         JSON.stringify({ error: "Account not found" }),
         { status: 404, headers: cors() }

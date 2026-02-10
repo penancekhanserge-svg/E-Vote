@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import bcrypt from "bcryptjs";
 import { toast, ToastContainer } from "react-toastify";
@@ -11,6 +11,8 @@ function Register() {
     email: "",
     password: "",
     confirmPassword: "",
+    region_id: "",
+    department_id: "",
   });
 
   const [showPassword, setShowPassword] = useState(false);
@@ -18,12 +20,79 @@ function Register() {
   const [errors, setErrors] = useState({});
   const [loading, setLoading] = useState(false);
 
+  // Regions & Departments
+  const [regions, setRegions] = useState([]);
+  const [departments, setDepartments] = useState([]);
+  const [loadingRegions, setLoadingRegions] = useState(false);
+  const [loadingDepartments, setLoadingDepartments] = useState(false);
+
+  // Fetch regions on mount
+  useEffect(() => {
+    fetchRegions();
+  }, []);
+
+  const fetchRegions = async () => {
+    setLoadingRegions(true);
+    const { data, error } = await supabase
+      .from("regions")
+      .select("id, name")
+      .order("name");
+
+    setLoadingRegions(false);
+
+    if (error) {
+      console.error("Error fetching regions:", error);
+      toast.error("Failed to load regions.");
+      return;
+    }
+    setRegions(data || []);
+  };
+
+  const fetchDepartmentsByRegion = async (regionId) => {
+    if (!regionId) {
+      setDepartments([]);
+      return;
+    }
+
+    setLoadingDepartments(true);
+    const { data, error } = await supabase
+      .from("departments")
+      .select("id, name, region_id")
+      .eq("region_id", regionId)
+      .order("name");
+
+    setLoadingDepartments(false);
+
+    if (error) {
+      console.error("Error fetching departments:", error);
+      toast.error("Failed to load departments.");
+      return;
+    }
+    setDepartments(data || []);
+  };
+
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
+
+    // If region changes, reset department and load departments for that region
+    if (name === "region_id") {
+      setFormData((prev) => ({
+        ...prev,
+        region_id: value,
+        department_id: "",
+      }));
+      fetchDepartmentsByRegion(value);
+    } else {
+      setFormData((prev) => ({ ...prev, [name]: value }));
+    }
 
     if (errors[name]) {
       setErrors((prev) => ({ ...prev, [name]: "" }));
+    }
+
+    // Clear department error also when changing region
+    if (name === "region_id" && errors.department_id) {
+      setErrors((prev) => ({ ...prev, department_id: "" }));
     }
   };
 
@@ -32,12 +101,13 @@ function Register() {
     const passwordRegex =
       /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
 
-    if (!formData.full_name.trim())
-      newErrors.full_name = "Full name is required";
-    if (!formData.email.trim())
-      newErrors.email = "Email is required";
-    if (!formData.password.trim())
-      newErrors.password = "Password is required";
+    if (!formData.full_name.trim()) newErrors.full_name = "Full name is required";
+    if (!formData.email.trim()) newErrors.email = "Email is required";
+    if (!formData.region_id) newErrors.region_id = "Please select your region";
+    if (!formData.department_id)
+      newErrors.department_id = "Please select your department";
+
+    if (!formData.password.trim()) newErrors.password = "Password is required";
     if (!formData.confirmPassword.trim())
       newErrors.confirmPassword = "Please confirm your password";
 
@@ -85,9 +155,7 @@ function Register() {
       const emailExists = await checkIfEmailExists(formData.email);
 
       if (emailExists) {
-        toast.error(
-          "This email is already registered (as Voter, Admin, or Candidate)."
-        );
+        toast.error("This email is already registered (as Voter, Admin, or Candidate).");
         setLoading(false);
         return;
       }
@@ -108,6 +176,8 @@ function Register() {
             full_name: formData.full_name,
             email: formData.email,
             password: hashedPassword,
+            region_id: formData.region_id,
+            department_id: formData.department_id,
           }),
         }
       );
@@ -128,7 +198,6 @@ function Register() {
       setTimeout(() => {
         window.location.href = `/auth/OTPVerify?email=${formData.email}`;
       }, 1500);
-
     } catch (err) {
       toast.error("Error: " + err.message);
       setLoading(false);
@@ -138,7 +207,6 @@ function Register() {
   return (
     <div className="min-h-screen bg-slate-100 dark:bg-slate-900 flex items-center justify-center px-4">
       <div className="w-full max-w-6xl bg-white dark:bg-slate-800 shadow-lg rounded-2xl overflow-hidden grid grid-cols-1 lg:grid-cols-2 h-auto lg:h-[90vh]">
-
         {/* LEFT FORM SECTION */}
         <div className="p-6 sm:p-8 flex flex-col justify-start h-full overflow-y-auto">
           <div className="flex items-center mb-4">
@@ -156,7 +224,6 @@ function Register() {
           </p>
 
           <form onSubmit={handleSubmit} className="space-y-4">
-
             {/* FULL NAME */}
             <div>
               <label className="block text-xs sm:text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">
@@ -168,9 +235,7 @@ function Register() {
                 value={formData.full_name}
                 onChange={handleChange}
                 className={`w-full px-3 py-2 rounded-md border ${
-                  errors.full_name
-                    ? "border-red-500"
-                    : "border-slate-300 dark:border-slate-600"
+                  errors.full_name ? "border-red-500" : "border-slate-300 dark:border-slate-600"
                 } bg-white dark:bg-slate-900 text-sm`}
                 placeholder="Enter your full name"
               />
@@ -190,14 +255,69 @@ function Register() {
                 value={formData.email}
                 onChange={handleChange}
                 className={`w-full px-3 py-2 rounded-md border ${
-                  errors.email
-                    ? "border-red-500"
-                    : "border-slate-300 dark:border-slate-600"
+                  errors.email ? "border-red-500" : "border-slate-300 dark:border-slate-600"
                 } bg-white dark:bg-slate-900 text-sm`}
                 placeholder="Enter your email"
               />
-              {errors.email && (
-                <p className="text-xs text-red-600 mt-1">{errors.email}</p>
+              {errors.email && <p className="text-xs text-red-600 mt-1">{errors.email}</p>}
+            </div>
+
+            {/* REGION */}
+            <div>
+              <label className="block text-xs sm:text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">
+                Birth Region
+              </label>
+              <select
+                name="region_id"
+                value={formData.region_id}
+                onChange={handleChange}
+                className={`w-full px-3 py-2 rounded-md border ${
+                  errors.region_id ? "border-red-500" : "border-slate-300 dark:border-slate-600"
+                } bg-white dark:bg-slate-900 text-sm`}
+              >
+                <option value="">
+                  {loadingRegions ? "Loading regions..." : "-- Select Region --"}
+                </option>
+                {regions.map((r) => (
+                  <option key={r.id} value={r.id}>
+                    {r.name}
+                  </option>
+                ))}
+              </select>
+              {errors.region_id && (
+                <p className="text-xs text-red-600 mt-1">{errors.region_id}</p>
+              )}
+            </div>
+
+            {/* DEPARTMENT */}
+            <div>
+              <label className="block text-xs sm:text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">
+                Birth Department
+              </label>
+              <select
+                name="department_id"
+                value={formData.department_id}
+                onChange={handleChange}
+                disabled={!formData.region_id || loadingDepartments}
+                className={`w-full px-3 py-2 rounded-md border ${
+                  errors.department_id ? "border-red-500" : "border-slate-300 dark:border-slate-600"
+                } bg-white dark:bg-slate-900 text-sm disabled:opacity-60`}
+              >
+                <option value="">
+                  {!formData.region_id
+                    ? "Select region first"
+                    : loadingDepartments
+                    ? "Loading departments..."
+                    : "-- Select Department --"}
+                </option>
+                {departments.map((d) => (
+                  <option key={d.id} value={d.id}>
+                    {d.name}
+                  </option>
+                ))}
+              </select>
+              {errors.department_id && (
+                <p className="text-xs text-red-600 mt-1">{errors.department_id}</p>
               )}
             </div>
 
@@ -213,9 +333,7 @@ function Register() {
                   value={formData.password}
                   onChange={handleChange}
                   className={`w-full px-3 py-2 rounded-md border ${
-                    errors.password
-                      ? "border-red-500"
-                      : "border-slate-300 dark:border-slate-600"
+                    errors.password ? "border-red-500" : "border-slate-300 dark:border-slate-600"
                   } bg-white dark:bg-slate-900 text-sm`}
                   placeholder="Enter strong password"
                 />
@@ -259,9 +377,7 @@ function Register() {
                 </button>
               </div>
               {errors.confirmPassword && (
-                <p className="text-xs text-red-600 mt-1">
-                  {errors.confirmPassword}
-                </p>
+                <p className="text-xs text-red-600 mt-1">{errors.confirmPassword}</p>
               )}
             </div>
 
@@ -278,10 +394,7 @@ function Register() {
           <div className="text-center mt-2">
             <p className="text-sm text-slate-500 dark:text-slate-300">
               Already have an account?{" "}
-              <Link
-                to="/auth/login"
-                className="text-indigo-600 hover:underline"
-              >
+              <Link to="/auth/login" className="text-indigo-600 hover:underline">
                 Login here
               </Link>
             </p>
@@ -290,26 +403,18 @@ function Register() {
 
         {/* RIGHT IMAGE SECTION */}
         <div className="relative hidden lg:flex items-center justify-center h-full">
-          <img
-            src="/background.jpg"
-            alt="Voting"
-            className="object-cover h-full w-full"
-          />
+          <img src="/background.jpg" alt="Voting" className="object-cover h-full w-full" />
           <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
             <div className="text-white text-center px-6 sm:px-8">
-              <h3 className="text-xl sm:text-2xl font-bold mb-2">
-                Welcome to VoteSecure
-              </h3>
+              <h3 className="text-xl sm:text-2xl font-bold mb-2">Welcome to VoteSecure</h3>
               <p className="text-sm sm:text-base leading-relaxed">
-                A modern platform for secure digital voting. Transparent.
-                Reliable. Simple.
+                A modern platform for secure digital voting. Transparent. Reliable. Simple.
               </p>
             </div>
           </div>
         </div>
-
       </div>
-      
+
       <ToastContainer
         position="top-right"
         autoClose={3000}
