@@ -81,7 +81,6 @@ Deno.serve(async (req) => {
       .eq("email", email)
       .maybeSingle();
 
-
     const { data: candidate } = await supabase
       .from("candidates")
       .select("id")
@@ -95,7 +94,12 @@ Deno.serve(async (req) => {
       );
     }
 
-    const table = voter ? "voters" : "admins";
+    // ✅ FIXED HERE (added candidate support)
+    let table = null;
+
+    if (voter) table = "voters";
+    else if (admin) table = "admins";
+    else if (candidate) table = "candidates";
 
     await supabase
       .from(table)

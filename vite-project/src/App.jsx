@@ -23,7 +23,6 @@ import Support from "./pages/Support";
 
 /* ===================== CANDIDATE DASHBOARD ===================== */
 import CandidateDashboard from "./pages/CandidateDashboard";
-import DashboardPage from "./pages/candidate/DashboardPage";
 import ElectionsPage from "./pages/candidate/ElectionsPage";
 import MyResult from "./pages/candidate/MyResult";
 import Help from "./pages/candidate/Help";
@@ -133,7 +132,6 @@ function App() {
         {/* ========== CANDIDATE (PROTECTED) ========== */}
         <Route element={<ProtectedRoute allowedRoles={["candidate"]} />}>
           <Route path="/candidate-dashboard" element={<CandidateDashboard />}>
-            <Route index element={<DashboardPage />} />
             <Route path="elections" element={<ElectionsPage />} />
             <Route path="results" element={<MyResult />} />
             <Route path="help" element={<Help />} />

@@ -14,36 +14,38 @@ function Support() {
     message: '',
   });
 
+  /* ✅ CANDIDATE FAQS */
   const faqs = [
     {
-      question: 'How do I reset my admin password?',
+      question: 'How do I reset my candidate account password?',
       answer:
-        'Go to your profile settings and click on "Change Password". Follow the instructions to reset your password.',
+        'Go to the login page and click “Forgot Password”. Enter your registered candidate email address and follow the reset instructions sent to your inbox.',
     },
     {
-      question: 'Can I publish results after submission?',
+      question: 'How do I reset my candidate account password?',
       answer:
-        'Yes, results can be published anytime unless locked by the system admin.',
+      'Candidate passwords cannot be reset directly by candidates. Please contact the system administrator or support team to request a password reset. Your identity will be verified before a new password is issued.',
+    },
+
+    {
+      question: 'How do I know which election I am registered for?',
+      answer:
+        'Your assigned election appears on your candidate dashboard and profile page. It shows the election type and region you are registered to participate in.',
     },
     {
-      question: 'How can I reach technical support?',
+      question: 'Can I change my party or region after registration?',
       answer:
-        'Use the contact form below or email support@electionportal.com.',
+        'Party or region changes usually require admin approval. Please contact support with your request and supporting details for verification.',
     },
     {
-      question: 'How do I update election details?',
+      question: 'Why is my candidate profile photo not showing?',
       answer:
-        'Navigate to the Election Management panel, select the election, and click "Edit".',
+        'Make sure you uploaded a valid image during registration or profile update. If the issue persists, try uploading again or contact support.',
     },
     {
-      question: 'Can I export election results?',
+      question: 'Can I access voting results as a candidate?',
       answer:
-        'You can export election results as PDFs by using the Export PDF button on the results page.',
-    },
-    {
-      question: 'How do I add new candidates?',
-      answer:
-        'Go to the Election Management panel, select the election, and use the Add Candidate button.',
+        'Yes. Depending on system settings, candidates can view election results or vote counts from their dashboard once results are published.',
     },
   ];
 
@@ -70,10 +72,10 @@ function Support() {
     setLoading(true);
 
     emailjs.send(
-      "service_ojhb2v1",      // Service ID
-      "template_chxvk3p",     // Template ID
-      formData,               // { fullName, email, subject, message }
-      "vupOZWa7Do2QknCAp"     // Public Key
+      "service_ojhb2v1",
+      "template_chxvk3p",
+      formData,
+      "vupOZWa7Do2QknCAp"
     )
     .then(() => {
       toast.success("Message sent successfully!");
@@ -93,20 +95,22 @@ function Support() {
       {/* Header */}
       <div className="text-center mb-10">
         <h1 className="text-4xl font-bold text-indigo-700 dark:text-indigo-400">
-          Support & Help Center
+          Candidate Support Center
         </h1>
         <p className="mt-2 text-gray-600 dark:text-gray-400 text-base max-w-xl mx-auto">
-          Need assistance? Browse our FAQs or reach out to our support team directly.
+          Need assistance with your candidate account? Browse FAQs or contact support.
         </p>
       </div>
 
       {/* FAQ + Contact Form Cards */}
       <div className="flex flex-col md:flex-row gap-8">
+
         {/* FAQ Card */}
         <div className="flex-1 bg-gradient-to-br from-indigo-100 to-white dark:from-slate-800 dark:to-slate-900 shadow-2xl border border-indigo-200 dark:border-slate-700 rounded-2xl p-6 transition">
           <h2 className="text-xl font-semibold text-indigo-900 dark:text-white mb-6">
-            Frequently Asked Questions
+            Candidate FAQs
           </h2>
+
           <div className="space-y-3">
             {faqs.map((faq, index) => (
               <div
@@ -122,6 +126,7 @@ function Support() {
                     {activeIndex === index ? '−' : '+'}
                   </span>
                 </button>
+
                 {activeIndex === index && (
                   <div className="px-5 py-3 text-gray-600 dark:text-gray-300 text-sm bg-indigo-50 dark:bg-slate-800">
                     {faq.answer}
@@ -139,6 +144,7 @@ function Support() {
           </h2>
 
           <form onSubmit={handleSubmit} className="space-y-4">
+
             <input
               type="text"
               name="fullName"
@@ -184,7 +190,7 @@ function Support() {
                 type="reset"
                 onClick={handleReset}
                 disabled={loading}
-                className="w-full py-2 rounded-lg bg-gray-200 dark:bg-slate-700 text-gray-800 dark:text-gray-200 hover:bg-gray-300 dark:hover:bg-slate-600 transition disabled:opacity-60"
+                className="w-full py-2 rounded-lg bg-gray-200 dark:bg-slate-700 hover:bg-gray-300 dark:hover:bg-slate-600 transition disabled:opacity-60"
               >
                 Reset
               </button>
@@ -196,28 +202,18 @@ function Support() {
                   ${loading
                     ? "bg-indigo-400 cursor-not-allowed"
                     : "bg-indigo-600 hover:bg-indigo-700"
-                  }
-                `}
+                  }`}
               >
                 {loading ? "Sending..." : "Send Request"}
               </button>
             </div>
+
           </form>
         </div>
+
       </div>
-      
-      <ToastContainer
-        position="top-right"
-        autoClose={5000}
-        hideProgressBar={false}
-        newestOnTop={false}
-        closeOnClick
-        rtl={false}
-        pauseOnFocusLoss
-        draggable
-        pauseOnHover
-        theme="light"
-      />
+
+      <ToastContainer position="top-right" autoClose={5000} />
     </div>
   );
 }

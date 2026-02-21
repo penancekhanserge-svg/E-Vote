@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import bcrypt from "bcryptjs";
 import { supabase } from "../../supabaseClient";
@@ -12,6 +12,15 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
 
   const navigate = useNavigate();
+
+  // ✅ PROTECT LOGIN PAGE (prevents going back to login)
+  useEffect(() => {
+    const role = localStorage.getItem("userRole");
+
+    if (role === "admin") navigate("/dashboard", { replace: true });
+    if (role === "candidate") navigate("/candidate-dashboard", { replace: true });
+    if (role === "voter") navigate("/user-dashboard", { replace: true });
+  }, []);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -44,7 +53,8 @@ export default function LoginPage() {
         localStorage.setItem("userName", admin.full_name);
         localStorage.setItem("userEmail", admin.email);
 
-        navigate("/dashboard");
+        // ✅ FIXED HERE
+        navigate("/dashboard", { replace: true });
         return;
       }
 
@@ -67,7 +77,8 @@ export default function LoginPage() {
         localStorage.setItem("userName", candidate.full_name);
         localStorage.setItem("userEmail", candidate.email);
 
-        navigate("/candidate-dashboard");
+        // ✅ FIXED HERE
+        navigate("/candidate-dashboard", { replace: true });
         return;
       }
 
@@ -91,7 +102,8 @@ export default function LoginPage() {
         localStorage.setItem("userName", voter.full_name);
         localStorage.setItem("userEmail", voter.email);
 
-        navigate("/user-dashboard");
+        // ✅ FIXED HERE
+        navigate("/user-dashboard", { replace: true });
         return;
       }
 
@@ -177,22 +189,11 @@ export default function LoginPage() {
 
       </div>
 
-      
-      
-      {/* Toastify Container */}
       <ToastContainer
         position="top-right"
         autoClose={3000}
-        hideProgressBar={false}
-        newestOnTop={false}
-        closeOnClick
-        rtl={false}
-        pauseOnFocusLoss
-        draggable
-        pauseOnHover
         theme="light"
       />
     </div>
   );
 }
-

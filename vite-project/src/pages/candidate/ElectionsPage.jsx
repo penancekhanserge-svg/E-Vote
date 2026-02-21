@@ -1,165 +1,171 @@
-import React, { useEffect, useState } from "react";
-import { supabase } from "../../supabaseClient";
+import React, { useEffect, useState } from "react"; // React hooks
+import { supabase } from "../../supabaseClient"; // Supabase client
 
 const ElectionsPage = () => {
-  const [loading, setLoading] = useState(true);
-  const [myElections, setMyElections] = useState([]);
+  const [loading, setLoading] = useState(true); // Loading state
+  const [myId, setMyId] = useState(""); // Logged in candidate/user id
+  const [election, setElection] = useState(null); // Single election object
 
   useEffect(() => {
-    fetchMyElections();
+    load(); // Fetch data on mount
   }, []);
 
-  const fetchMyElections = async () => {
-    setLoading(true);
+  const load = async () => {
+    setLoading(true); // Start loading
+    try {
+      const candidateId = localStorage.getItem("userId") || ""; // Read user id
+      setMyId(candidateId); // Store user id
 
-    /* 1️⃣ Get logged-in user */
-    const {
-      data: { user },
-      error: userError,
-    } = await supabase.auth.getUser();
+      if (!candidateId) return; // Stop if no user
 
-    if (userError || !user) {
-      setLoading(false);
-      return;
-    }
+      // Fetch candidate to get election_id
+      const { data: candidate, error: cErr } = await supabase
+        .from("candidates")
+        .select("id,election_id")
+        .eq("id", candidateId)
+        .single();
+      if (cErr || !candidate?.election_id) return; // Stop if no election
 
-    /* 2️⃣ Get candidate profile */
-    const { data: candidate, error: candidateError } = await supabase
-      .from("candidates")
-      .select("id")
-      .eq("user_id", user.id)
-      .single();
+      // Fetch election details (with type name)
+      const { data: e, error: eErr } = await supabase
+        .from("elections")
+        .select("id,start_date,end_date,election_types(name)")
+        .eq("id", candidate.election_id)
+        .single();
+      if (eErr || !e) return; // Stop if election missing
 
-    if (candidateError || !candidate) {
-      setLoading(false);
-      return;
-    }
+      // Fetch contestants for that election
+      const { data: contestants, error: tErr } = await supabase
+        .from("candidates")
+        .select("id,full_name")
+        .eq("election_id", candidate.election_id);
+      if (tErr) return; // Stop if contestants fetch fails
 
-    /* 3️⃣ Fetch elections this candidate is contesting */
-    const { data, error } = await supabase
-      .from("candidates_elections")
-      .select(`
-        election: elections (
-          id,
-          start_date,
-          end_date,
-          election_types ( name ),
-          candidates_elections (
-            candidate: candidates ( full_name )
-          )
-        )
-      `)
-      .eq("candidate_id", candidate.id);
+      // Compute election status
+      const now = new Date(); // Current time
+      const start = new Date(e.start_date); // Start date
+      const end = new Date(e.end_date); // End date
+      const status =
+        start <= now && end >= now ? "Ongoing" : end < now ? "Completed" : "Upcoming"; // Status
 
-    if (error || !data) {
-      setLoading(false);
-      return;
-    }
-
-    /* 4️⃣ Format elections */
-    const now = new Date();
-
-    const formatted = data.map((row) => {
-      const election = row.election;
-
-      let status = "Upcoming";
-      if (new Date(election.start_date) <= now && new Date(election.end_date) >= now) {
-        status = "Ongoing";
-      } else if (new Date(election.end_date) < now) {
-        status = "Completed";
-      }
-
-      return {
-        id: election.id,
-        title: election.election_types?.name || "Election",
-        date: new Date(election.start_date).toDateString(),
-        status,
-        contestants: election.candidates_elections.map(
-          (ce) => ce.candidate.full_name
-        ),
-      };
-    });
-
-    setMyElections(formatted);
-    setLoading(false);
-  };
-
-  const getStatusColor = (status) => {
-    switch (status) {
-      case "Ongoing":
-        return "bg-green-100 text-green-800";
-      case "Upcoming":
-        return "bg-yellow-100 text-yellow-800";
-      case "Completed":
-        return "bg-blue-100 text-blue-800";
-      default:
-        return "bg-gray-100 text-gray-800";
+      // Store final minimal election object
+      setElection({
+        id: e.id, // Election id
+        title: e.election_types?.name || "Election", // Title
+        status, // Status
+        contestants: contestants || [], // Contestants list
+      });
+    } catch (err) {
+      console.error(err); // Log unexpected errors
+    } finally {
+      setLoading(false); // End loading
     }
   };
 
-  /* ───────────── LOADING ───────────── */
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="animate-spin h-10 w-10 border-4 border-indigo-600 border-t-transparent rounded-full" />
+      <div className="min-h-screen flex items-center justify-center bg-slate-50">
+        <div className="h-8 w-8 animate-spin rounded-full border-2 border-indigo-600 border-t-transparent"></div>
       </div>
     );
   }
 
+  if (!election) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-slate-50 px-4">
+        <p className="text-gray-500">No election found.</p>
+      </div>
+    );
+  }
+
+  // Helper to get initials for avatar
+  const getInitials = (name) => {
+    if (!name) return "?";
+    return name
+      .split(" ")
+      .map((n) => n[0])
+      .join("")
+      .toUpperCase()
+      .slice(0, 2);
+  };
+
   return (
-    <div className="min-h-screen flex flex-col items-center pt-12 px-4">
-      <div className="w-full max-w-4xl space-y-6">
-        <h1 className="text-3xl font-bold text-center text-gray-900">
-          My Elections
-        </h1>
-
-        {myElections.length === 0 && (
-          <p className="text-center text-gray-500">
-            You are not registered in any elections yet.
-          </p>
-        )}
-
-        <div className="grid gap-6">
-          {myElections.map((election) => (
-            <div
-              key={election.id}
-              className="bg-white rounded-xl shadow-sm p-6 transition hover:shadow-lg"
-            >
-              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4">
-                <div>
-                  <h2 className="text-xl font-semibold text-gray-900">
-                    {election.title}
-                  </h2>
-                  <p className="text-gray-500">{election.date}</p>
-                </div>
-                <span
-                  className={`mt-3 sm:mt-0 text-sm font-medium px-3 py-1 rounded-full ${getStatusColor(
-                    election.status
-                  )}`}
-                >
-                  {election.status}
-                </span>
-              </div>
-
-              {/* Contestants */}
-              <div>
-                <p className="text-sm font-semibold text-gray-700 mb-2">
-                  Contestants
-                </p>
-                <div className="flex flex-wrap gap-2">
-                  {election.contestants.map((name) => (
-                    <span
-                      key={name}
-                      className="bg-indigo-100 text-indigo-800 text-xs px-3 py-1 rounded-full font-medium"
-                    >
-                      {name}
-                    </span>
-                  ))}
-                </div>
-              </div>
-            </div>
-          ))}
+    <div className="min-h-screen bg-slate-50 py-10 px-4 sm:px-6">
+      <div className="max-w-3xl mx-auto bg-white rounded-2xl shadow-xl overflow-hidden border border-slate-200">
+        
+        {/* PAGE HEADER */}
+        <div className="bg-white px-6 py-6 sm:px-8 sm:py-8 border-b border-slate-100">
+          <h1 className="text-2xl sm:text-3xl font-bold text-slate-800">
+            Candidates for {election.title}
+          </h1>
+          <div className="mt-2">
+             <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wide border ${
+                election.status === 'Ongoing' ? 'bg-green-50 text-green-700 border-green-200' : 
+                election.status === 'Completed' ? 'bg-slate-100 text-slate-700 border-slate-200' : 
+                'bg-blue-50 text-blue-700 border-blue-200'
+              }`}>
+              {election.status}
+            </span>
+          </div>
         </div>
+
+        {/* TABLE CONTAINER */}
+        <div className="overflow-x-auto">
+          <table className="w-full text-left border-collapse">
+            {/* WHITE HEADER WITH THICK BORDER */}
+            <thead className="bg-white border-b-2 border-slate-200">
+              <tr>
+                <th className="py-5 pl-6 pr-4 text-xs font-extrabold uppercase tracking-wider text-slate-700 w-16">
+                  #
+                </th>
+                <th className="py-5 px-4 text-xs font-extrabold uppercase tracking-wider text-slate-700">
+                  Candidate Name
+                </th>
+                <th className="py-5 pl-4 pr-6 text-right text-xs font-extrabold uppercase tracking-wider text-slate-700 w-32">
+                  Status
+                </th>
+              </tr>
+            </thead>
+
+            {/* BODY */}
+            <tbody className="divide-y divide-slate-100 bg-white">
+              {election.contestants.map((c, idx) => {
+                const isMe = String(c.id) === String(myId);
+
+                return (
+                  <tr 
+                    key={c.id} 
+                    className={`group hover:bg-slate-50 transition-colors ${isMe ? 'bg-indigo-50/40' : ''}`}
+                  >
+                    <td className="py-4 pl-6 pr-4 text-sm text-slate-500 font-mono">
+                      {idx + 1}
+                    </td>
+                    <td className="py-4 px-4">
+                      <div className="flex items-center gap-3">
+                        <div className="h-10 w-10 rounded-full bg-slate-200 flex items-center justify-center text-xs font-bold text-slate-600 border border-slate-300 shadow-sm">
+                          {getInitials(c.full_name)}
+                        </div>
+                        <span className={`text-sm sm:text-base font-medium text-slate-900 ${isMe ? 'text-indigo-700' : ''}`}>
+                          {c.full_name || "Unknown Candidate"}
+                        </span>
+                      </div>
+                    </td>
+                    <td className="py-4 pl-4 pr-6 text-right">
+                      {isMe ? (
+                        <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-indigo-600 text-white shadow-sm ring-1 ring-indigo-600/20">
+                          YOU
+                        </span>
+                      ) : (
+                        <span className="text-slate-400 text-xs">-</span>
+                      )}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+
       </div>
     </div>
   );
