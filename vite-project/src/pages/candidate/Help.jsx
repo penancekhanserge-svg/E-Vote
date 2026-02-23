@@ -72,7 +72,7 @@ function Support() {
     setLoading(true);
 
     emailjs.send(
-      "service_ojhb2v1",
+      "service_zns4e17",
       "template_chxvk3p",
       formData,
       "vupOZWa7Do2QknCAp"

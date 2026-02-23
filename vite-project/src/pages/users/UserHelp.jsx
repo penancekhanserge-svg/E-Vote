@@ -70,7 +70,7 @@ function Support() {
     setLoading(true);
 
     emailjs.send(
-      "service_ojhb2v1",      // Service ID
+      "service_zns4e17",      // Service ID
       "template_chxvk3p",     // Template ID
       formData,               // { fullName, email, subject, message }
       "vupOZWa7Do2QknCAp"     // Public Key
