@@ -105,7 +105,7 @@ function Header({ theme, onToggleTheme }) {
 
                 <div className="py-2">
                   <button
-                    onClick={() => navigate("/settings")}
+                    onClick={() => navigate("/dashboard/settings")}
                     className="w-full flex items-center gap-3 px-4 py-2
                                text-sm text-slate-700 dark:text-slate-200
                                hover:bg-slate-50 dark:hover:bg-slate-700/50"
@@ -116,14 +116,17 @@ function Header({ theme, onToggleTheme }) {
 
                   <button
                     onClick={() => {
-                     // clear admin session (manual auth)
-                    localStorage.removeItem("adminId");
-                    localStorage.removeItem("userName");
-                    localStorage.removeItem("role");
+                      // Clear all session keys
+                      localStorage.removeItem("userId");
+                      localStorage.removeItem("userRole");
+                      localStorage.removeItem("userName");
+                      localStorage.removeItem("userEmail");
+                      localStorage.removeItem("admin_id");
+                      localStorage.removeItem("voterId");
 
-                    // force clean redirect
-                    window.location.href = "/auth/login";
-        }}
+                      // Navigate to login using React Router
+                      navigate("/auth/login");
+                    }}
                     className="w-full flex items-center gap-3 px-4 py-2
                     text-sm text-red-600
                     hover:bg-red-50 dark:hover:bg-red-900/20

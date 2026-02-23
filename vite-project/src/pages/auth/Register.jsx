@@ -403,7 +403,7 @@ function Register() {
 
         {/* RIGHT IMAGE SECTION */}
         <div className="relative hidden lg:flex items-center justify-center h-full">
-          <img src="/background.jpg" alt="Voting" className="object-cover h-full w-full" />
+          <img src="/back.jpeg" alt="Voting" className="object-cover h-full w-full" />
           <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
             <div className="text-white text-center px-6 sm:px-8">
               <h3 className="text-xl sm:text-2xl font-bold mb-2">Welcome to VoteSecure</h3>
