@@ -1,11 +1,13 @@
 import React, { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import bcrypt from "bcryptjs";
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import { supabase } from "../../supabaseClient"; // Ensure you have your client imported
 
 function Register() {
+  const MAX_OCR_IMAGE_BYTES = 1024 * 1024; // OCR.Space free tier friendly limit
+  const navigate = useNavigate();
   const [formData, setFormData] = useState({
     full_name: "",
     email: "",
@@ -13,8 +15,10 @@ function Register() {
     confirmPassword: "",
     region_id: "",
     department_id: "",
+    id_card_number: "",
   });
 
+  const [idCardBackFile, setIdCardBackFile] = useState(null);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [errors, setErrors] = useState({});
@@ -28,8 +32,22 @@ function Register() {
 
   // Fetch regions on mount
   useEffect(() => {
+    const role = localStorage.getItem("userRole");
+    if (role === "admin") {
+      navigate("/dashboard", { replace: true });
+      return;
+    }
+    if (role === "candidate") {
+      navigate("/candidate-dashboard", { replace: true });
+      return;
+    }
+    if (role === "voter") {
+      navigate("/user-dashboard", { replace: true });
+      return;
+    }
+
     fetchRegions();
-  }, []);
+  }, [navigate]);
 
   const fetchRegions = async () => {
     setLoadingRegions(true);
@@ -82,6 +100,9 @@ function Register() {
         department_id: "",
       }));
       fetchDepartmentsByRegion(value);
+    } else if (name === "id_card_number") {
+      const digitsOnly = value.replace(/\D/g, "").slice(0, 17);
+      setFormData((prev) => ({ ...prev, [name]: digitsOnly }));
     } else {
       setFormData((prev) => ({ ...prev, [name]: value }));
     }
@@ -96,6 +117,22 @@ function Register() {
     }
   };
 
+  const handleIdBackFileChange = (e) => {
+    const file = e.target.files?.[0] || null;
+    setIdCardBackFile(file);
+    if (errors.id_card_back_url) {
+      setErrors((prev) => ({ ...prev, id_card_back_url: "" }));
+    }
+  };
+
+  const fileToDataUrl = (file) =>
+    new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result);
+      reader.onerror = () => reject(new Error("Failed to read ID image."));
+      reader.readAsDataURL(file);
+    });
+
   const validateForm = () => {
     const newErrors = {};
     const passwordRegex =
@@ -106,6 +143,14 @@ function Register() {
     if (!formData.region_id) newErrors.region_id = "Please select your region";
     if (!formData.department_id)
       newErrors.department_id = "Please select your department";
+
+    if (!/^\d{17}$/.test(formData.id_card_number || "")) {
+      newErrors.id_card_number = "ID card number must be exactly 17 digits.";
+    }
+
+    if (!idCardBackFile) {
+      newErrors.id_card_back_url = "Please upload the back of your ID card.";
+    }
 
     if (!formData.password.trim()) newErrors.password = "Password is required";
     if (!formData.confirmPassword.trim())
@@ -151,8 +196,10 @@ function Register() {
     setLoading(true);
 
     try {
+      const normalizedEmail = formData.email.trim().toLowerCase();
+
       // 1. Check email existence in Voters, Admins, and Candidates tables
-      const emailExists = await checkIfEmailExists(formData.email);
+      const emailExists = await checkIfEmailExists(normalizedEmail);
 
       if (emailExists) {
         toast.error("This email is already registered (as Voter, Admin, or Candidate).");
@@ -160,10 +207,63 @@ function Register() {
         return;
       }
 
-      // 2. If email is unique, proceed with password hashing
+      if (!/^\d{17}$/.test(formData.id_card_number)) {
+        toast.error("ID card number must be exactly 17 digits.");
+        setLoading(false);
+        return;
+      }
+
+      if (!idCardBackFile) {
+        toast.error("Please upload the back of your ID card.");
+        setLoading(false);
+        return;
+      }
+
+      // 2. Convert ID image to base64 data URL (stored directly in DB)
+      if (idCardBackFile.size > MAX_OCR_IMAGE_BYTES) {
+        toast.error("ID image is too large for OCR. Please upload an image below 1MB.");
+        setLoading(false);
+        return;
+      }
+
+      const idCardBackDataUrl = await fileToDataUrl(idCardBackFile);
+      if (typeof idCardBackDataUrl !== "string" || !idCardBackDataUrl.startsWith("data:image/")) {
+        toast.error("Invalid ID image format.");
+        setLoading(false);
+        return;
+      }
+
+      // 3. Verify ID number against OCR from uploaded image
+      const verifyResponse = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/verify-id-card`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+            apikey: import.meta.env.VITE_SUPABASE_ANON_KEY,
+          },
+          body: JSON.stringify({
+            id_card_number: formData.id_card_number,
+            id_card_back_url: idCardBackDataUrl,
+          }),
+        }
+      );
+
+      const verifyResult = await verifyResponse.json().catch(() => ({}));
+      if (!verifyResponse.ok || verifyResult?.status !== "match") {
+        toast.error(
+          verifyResult?.error ||
+            "ID verification failed. Please ensure the image is clear and number matches."
+        );
+        setLoading(false);
+        return;
+      }
+
+      // 4. If ID is valid, proceed with password hashing
       const hashedPassword = await bcrypt.hash(formData.password, 10);
 
-      // 3. Send OTP / Register via Edge Function
+      // 5. Send OTP / Register via Edge Function
       const response = await fetch(
         `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/send-otp`,
         {
@@ -174,10 +274,12 @@ function Register() {
           },
           body: JSON.stringify({
             full_name: formData.full_name,
-            email: formData.email,
+            email: normalizedEmail,
             password: hashedPassword,
             region_id: formData.region_id,
             department_id: formData.department_id,
+            id_card_number: formData.id_card_number,
+            id_card_back_url: idCardBackDataUrl,
           }),
         }
       );
@@ -196,7 +298,7 @@ function Register() {
       setLoading(false);
 
       setTimeout(() => {
-        window.location.href = `/auth/OTPVerify?email=${formData.email}`;
+        window.location.href = `/auth/OTPVerify?email=${normalizedEmail}`;
       }, 1500);
     } catch (err) {
       toast.error("Error: " + err.message);
@@ -205,10 +307,10 @@ function Register() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-100 dark:bg-slate-900 flex items-center justify-center px-4">
-      <div className="w-full max-w-6xl bg-white dark:bg-slate-800 shadow-lg rounded-2xl overflow-hidden grid grid-cols-1 lg:grid-cols-2 h-auto lg:h-[90vh]">
+    <div className="min-h-screen bg-slate-100 dark:bg-slate-900 flex justify-center px-4 py-4 sm:py-6 lg:py-8">
+      <div className="w-full max-w-6xl bg-white dark:bg-slate-800 shadow-lg rounded-2xl overflow-hidden grid grid-cols-1 lg:grid-cols-2">
         {/* LEFT FORM SECTION */}
-        <div className="p-6 sm:p-8 flex flex-col justify-start h-full overflow-y-auto">
+        <div className="p-6 sm:p-8 flex flex-col justify-start">
           <div className="flex items-center mb-4">
             <img src="/logo2.png" alt="Logo" className="w-20 h-20 rounded-full mr-3" />
             <span className="text-lg font-bold text-indigo-600 dark:text-indigo-400">
@@ -260,6 +362,55 @@ function Register() {
                 placeholder="Enter your email"
               />
               {errors.email && <p className="text-xs text-red-600 mt-1">{errors.email}</p>}
+            </div>
+
+            {/* ID CARD NUMBER */}
+            <div>
+              <label className="block text-xs sm:text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">
+                ID Card Number
+              </label>
+              <input
+                type="text"
+                name="id_card_number"
+                value={formData.id_card_number}
+                onChange={handleChange}
+                maxLength={17}
+                inputMode="numeric"
+                className={`w-full px-3 py-2 rounded-md border ${
+                  errors.id_card_number
+                    ? "border-red-500"
+                    : "border-slate-300 dark:border-slate-600"
+                } bg-white dark:bg-slate-900 text-sm`}
+                placeholder="Enter 17-digit ID number"
+              />
+              {errors.id_card_number && (
+                <p className="text-xs text-red-600 mt-1">{errors.id_card_number}</p>
+              )}
+            </div>
+
+            {/* ID CARD BACK IMAGE */}
+            <div>
+              <label className="block text-xs sm:text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">
+                ID Card Back Image
+              </label>
+              <input
+                type="file"
+                accept="image/*"
+                onChange={handleIdBackFileChange}
+                className={`w-full px-3 py-2 rounded-md border ${
+                  errors.id_card_back_url
+                    ? "border-red-500"
+                    : "border-slate-300 dark:border-slate-600"
+                } bg-white dark:bg-slate-900 text-sm file:mr-3 file:rounded file:border-0 file:bg-indigo-600 file:px-3 file:py-1.5 file:text-white`}
+              />
+              {idCardBackFile && (
+                <p className="text-xs text-slate-500 mt-1 truncate">
+                  Selected: {idCardBackFile.name}
+                </p>
+              )}
+              {errors.id_card_back_url && (
+                <p className="text-xs text-red-600 mt-1">{errors.id_card_back_url}</p>
+              )}
             </div>
 
             {/* REGION */}

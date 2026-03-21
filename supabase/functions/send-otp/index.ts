@@ -35,13 +35,37 @@ Deno.serve(async (req) => {
     }
 
   try {
-    // ✅ now includes region_id & department_id
-    const { full_name, email, password, region_id, department_id } = await req.json();
+    const {
+      full_name,
+      email,
+      password,
+      region_id,
+      department_id,
+      id_card_number,
+      id_card_back_url,
+    } = await req.json();
+    const normalizedEmail = String(email ?? "").trim().toLowerCase();
+    const normalizedIdCardNumber = String(id_card_number ?? "").replace(/\D/g, "");
 
     // ─────────── Validate Input ───────────
-    if (!full_name || !email || !password || !region_id || !department_id) {
+    if (
+      !full_name ||
+      !normalizedEmail ||
+      !password ||
+      !region_id ||
+      !department_id ||
+      !normalizedIdCardNumber ||
+      !id_card_back_url
+    ) {
       return new Response(
         JSON.stringify({ error: "Missing required fields" }),
+        { status: 400, headers: corsHeaders() }
+      );
+    }
+
+    if (!/^\d{17}$/.test(normalizedIdCardNumber)) {
+      return new Response(
+        JSON.stringify({ error: "ID card number must be exactly 17 digits" }),
         { status: 400, headers: corsHeaders() }
       );
     }
@@ -72,7 +96,7 @@ Deno.serve(async (req) => {
     const { data: existingVoter } = await supabase
       .from("voters")
       .select("id")
-      .eq("email", email)
+      .eq("email", normalizedEmail)
       .maybeSingle();
 
     if (existingVoter) {
@@ -80,6 +104,49 @@ Deno.serve(async (req) => {
         JSON.stringify({
           error: "An account with this email already exists. Please log in.",
         }),
+        { status: 409, headers: corsHeaders() }
+      );
+    }
+
+    // Block duplicate ID card number in voters
+    const { data: existingVoterById, error: voterIdErr } = await supabase
+      .from("voters")
+      .select("id")
+      .eq("id_card_number", normalizedIdCardNumber)
+      .maybeSingle();
+
+    if (voterIdErr) {
+      return new Response(
+        JSON.stringify({ error: "Database error" }),
+        { status: 500, headers: corsHeaders() }
+      );
+    }
+
+    if (existingVoterById) {
+      return new Response(
+        JSON.stringify({ error: "This ID card number is already registered." }),
+        { status: 409, headers: corsHeaders() }
+      );
+    }
+
+    // Block duplicate ID card number in pending_users (except same email retry)
+    const { data: existingPendingById, error: pendingIdErr } = await supabase
+      .from("pending_users")
+      .select("email")
+      .eq("id_card_number", normalizedIdCardNumber)
+      .neq("email", normalizedEmail)
+      .maybeSingle();
+
+    if (pendingIdErr) {
+      return new Response(
+        JSON.stringify({ error: "Database error" }),
+        { status: 500, headers: corsHeaders() }
+      );
+    }
+
+    if (existingPendingById) {
+      return new Response(
+        JSON.stringify({ error: "This ID card number is already in use." }),
         { status: 409, headers: corsHeaders() }
       );
     }
@@ -92,11 +159,13 @@ Deno.serve(async (req) => {
     // If user requests OTP again, overwrite otp_code + expires_at (and keep latest region/department)
     const { error: dbError } = await supabase.from("pending_users").upsert(
       {
-        email,
+        email: normalizedEmail,
         full_name,
         password,
         region_id,
         department_id,
+        id_card_number: normalizedIdCardNumber,
+        id_card_back_url,
         otp_code: otp,
         expires_at,
       },
@@ -105,6 +174,12 @@ Deno.serve(async (req) => {
 
     if (dbError) {
       console.error("DB ERROR:", dbError);
+      if (dbError.code === "23505") {
+        return new Response(
+          JSON.stringify({ error: "This ID card number is already registered." }),
+          { status: 409, headers: corsHeaders() }
+        );
+      }
       return new Response(
         JSON.stringify({ error: "Database error" }),
         { status: 400, headers: corsHeaders() }
@@ -120,7 +195,7 @@ Deno.serve(async (req) => {
       },
       body: JSON.stringify({
         from: "VoteSecure <no-reply@ballotium.app>",
-        to: email,
+        to: normalizedEmail,
         subject: "Verify your VoteSecure account",
         html: `
 <!DOCTYPE html>

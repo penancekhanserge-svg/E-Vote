@@ -6,6 +6,7 @@ import {
   useLocation,
   useNavigate,
   Navigate,
+  Outlet,
 } from "react-router-dom";
 
 import ProtectedRoute from "./routes/ProtectedRoute";
@@ -110,6 +111,32 @@ function AdminLayout() {
   );
 }
 
+function DefaultRedirect() {
+  const role = localStorage.getItem("userRole");
+  const userId = localStorage.getItem("userId");
+
+  if (!role || !userId) return <Navigate to="/auth/register" replace />;
+
+  if (role === "admin") return <Navigate to="/dashboard" replace />;
+  if (role === "candidate") return <Navigate to="/candidate-dashboard" replace />;
+  if (role === "voter") return <Navigate to="/user-dashboard" replace />;
+
+  return <Navigate to="/auth/register" replace />;
+}
+
+function PublicAuthRoute() {
+  const role = localStorage.getItem("userRole");
+  const userId = localStorage.getItem("userId");
+
+  if (role && userId) {
+    if (role === "admin") return <Navigate to="/dashboard" replace />;
+    if (role === "candidate") return <Navigate to="/candidate-dashboard" replace />;
+    if (role === "voter") return <Navigate to="/user-dashboard" replace />;
+  }
+
+  return <Outlet />;
+}
+
 /* ========================================================= */
 /* ========================= APP =========================== */
 /* ========================================================= */
@@ -118,11 +145,15 @@ function App() {
   return (
     <BrowserRouter>
       <Routes>
+        <Route path="/" element={<DefaultRedirect />} />
+
         {/* ========== PUBLIC ROUTES ========== */}
-        <Route path="/auth/register" element={<Register />} />
-        <Route path="/auth/login" element={<Login />} />
-        <Route path="/auth/OTPVerify" element={<OTPVerify />} />
-        <Route path="/auth/password" element={<Password />} />
+        <Route element={<PublicAuthRoute />}>
+          <Route path="/auth/register" element={<Register />} />
+          <Route path="/auth/login" element={<Login />} />
+          <Route path="/auth/OTPVerify" element={<OTPVerify />} />
+          <Route path="/auth/password" element={<Password />} />
+        </Route>
 
         {/* ========== ADMIN (PROTECTED) ========== */}
         <Route element={<ProtectedRoute allowedRoles={["admin"]} />}>
@@ -150,7 +181,7 @@ function App() {
         </Route>
 
         {/* ========== BLOCK EVERYTHING ELSE ========== */}
-        <Route path="*" element={<Navigate to="/auth/register" replace />} />
+        <Route path="*" element={<DefaultRedirect />} />
       </Routes>
     </BrowserRouter>
   );

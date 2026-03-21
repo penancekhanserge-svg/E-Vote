@@ -30,6 +30,7 @@ export default function LoginPage() {
       return;
     }
 
+    const normalizedEmail = email.trim().toLowerCase();
     setLoading(true);
 
     try {
@@ -37,7 +38,7 @@ export default function LoginPage() {
       const { data: admin } = await supabase
         .from("admins")
         .select("id, full_name, email, password")
-        .eq("email", email)
+        .eq("email", normalizedEmail)
         .maybeSingle();
 
       if (admin && admin.password) {
@@ -62,7 +63,7 @@ export default function LoginPage() {
       const { data: candidate } = await supabase
         .from("candidates")
         .select("id, full_name, email, password")
-        .eq("email", email)
+        .eq("email", normalizedEmail)
         .maybeSingle();
 
       if (candidate && candidate.password) {
@@ -86,7 +87,7 @@ export default function LoginPage() {
       const { data: voter } = await supabase
         .from("voters")
         .select("id, full_name, email, password")
-        .eq("email", email)
+        .eq("email", normalizedEmail)
         .maybeSingle();
 
       if (voter && voter.password) {

@@ -132,6 +132,8 @@ Deno.serve(async (req) => {
         has_voted: false,
         region_id: user.region_id, // ✅ FIX
         department_id: user.department_id, // ✅ FIX
+        id_card_number: user.id_card_number,
+        id_card_back_url: user.id_card_back_url,
       });
 
       if (insertErr) {
@@ -153,6 +155,15 @@ Deno.serve(async (req) => {
         })
         .eq("id", existingVoter.id)
         .is("region_id", null);
+
+      await supabase
+        .from("voters")
+        .update({
+          id_card_number: user.id_card_number,
+          id_card_back_url: user.id_card_back_url,
+        })
+        .eq("id", existingVoter.id)
+        .is("id_card_number", null);
     }
 
     // ─────────── Cleanup Pending User ───────────
