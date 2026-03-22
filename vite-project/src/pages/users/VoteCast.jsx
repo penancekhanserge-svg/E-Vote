@@ -1,3 +1,5 @@
+// File overview: Implements this module's main behavior and UI/data flow.
+// Imports: external libraries and shared modules used in this file.
 import React, { useEffect, useState } from "react";
 import { supabase } from "../../supabaseClient";
 import { Inbox } from "lucide-react";
@@ -7,6 +9,7 @@ import "react-toastify/dist/ReactToastify.css";
 export default function VotePage() {
   const voterId = localStorage.getItem("userId");
 
+  // State: tracks local values needed to render and update the screen.
   const [elections, setElections] = useState([]);
   const [selectedVotes, setSelectedVotes] = useState({});
   const [confirmModal, setConfirmModal] = useState(null);
@@ -15,10 +18,12 @@ export default function VotePage() {
   const [loading, setLoading] = useState(true);
 
   /* ───────── FETCH ACTIVE ELECTIONS + CANDIDATES ───────── */
+  // Effects: run startup logic and react to dependency changes.
   useEffect(() => {
     fetchElections();
   }, []);
 
+  // Data loading: retrieves records from APIs or the database.
   const fetchElections = async () => {
     const today = new Date().toISOString();
 
@@ -55,6 +60,7 @@ export default function VotePage() {
   };
 
   /* ───────── SELECT VOTE (TEMP ONLY) ───────── */
+  // Event handlers: respond to user actions and form submissions.
   const handleVoteClick = (electionId, candidate) => {
     if (submitted) return;
     setConfirmModal({ electionId, candidate });
@@ -110,6 +116,7 @@ export default function VotePage() {
   };
 
   /* ───────── UI ───────── */
+  // Render: returns the visible UI structure for this component.
   return (
     <div className="min-h-screen bg-gray-50 py-10 px-4">
       <div className="max-w-4xl mx-auto">

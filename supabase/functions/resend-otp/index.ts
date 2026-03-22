@@ -1,8 +1,11 @@
+// File overview: Implements this module's main behavior and UI/data flow.
+// Imports: external libraries and shared modules used in this file.
 import { createClient } from "jsr:@supabase/supabase-js@2";
 
 // ─────────────────────────────────────────────
 // Supabase (SERVICE ROLE – EDGE ONLY)
 // ─────────────────────────────────────────────
+// Configuration: environment values and service clients.
 const supabase = createClient(
   Deno.env.get("SUPABASE_URL")!,
   Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
@@ -19,6 +22,7 @@ const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY");
 const LOCK_WINDOW_MS = 10 * 60 * 1000; // 10 minutes
 const MAX_RESENDS = 3;
 
+// Request handling: receives HTTP calls and returns API responses.
 Deno.serve(async (req) => {
   // ─────────── CORS ───────────
   if (req.method === "OPTIONS") {

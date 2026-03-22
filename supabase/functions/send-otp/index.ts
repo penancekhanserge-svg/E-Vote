@@ -1,8 +1,11 @@
+// File overview: Implements this module's main behavior and UI/data flow.
+// Imports: external libraries and shared modules used in this file.
 import { createClient } from "jsr:@supabase/supabase-js@2";
 
 // ─────────────────────────────────────────────
 // Supabase client (SERVICE ROLE – EDGE ONLY)
 // ─────────────────────────────────────────────
+// Configuration: environment values and service clients.
 const supabase = createClient(
   Deno.env.get("SUPABASE_URL")!,
   Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
@@ -17,6 +20,7 @@ console.log("RESEND_API_KEY exists:", !!RESEND_API_KEY);
 // ─────────────────────────────────────────────
 // Helpers
 // ─────────────────────────────────────────────
+  // Helpers: reusable utility logic used by this module.
 function corsHeaders() {
   return {
     "Access-Control-Allow-Origin": "*",
@@ -28,6 +32,7 @@ function corsHeaders() {
 // ─────────────────────────────────────────────
 // Edge Function
 // ─────────────────────────────────────────────
+// Request handling: receives HTTP calls and returns API responses.
 Deno.serve(async (req) => {
   // ─────────── CORS ───────────
   if (req.method === "OPTIONS") {

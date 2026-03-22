@@ -1,7 +1,9 @@
+// File overview: Implements this module's main behavior and UI/data flow.
 const OCR_API_URL = "https://api.ocr.space/parse/image";
 const OCR_API_KEY = Deno.env.get("OCR_SPACE_API_KEY");
 const SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
 
+  // Helpers: reusable utility logic used by this module.
 function corsHeaders() {
   return {
     "Access-Control-Allow-Origin": "*",
@@ -67,6 +69,7 @@ async function downloadImage(url: string) {
   };
 }
 
+  // Data loading: retrieves records from APIs or the database.
 async function getImageBytes(input: string) {
   if (input.startsWith("data:image/")) {
     return decodeDataUrl(input);
@@ -133,6 +136,7 @@ async function runOcr(imageBytes: ArrayBuffer, contentType: string) {
     .trim();
 }
 
+// Request handling: receives HTTP calls and returns API responses.
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { status: 204, headers: corsHeaders() });

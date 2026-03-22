@@ -1,9 +1,12 @@
+// File overview: Implements this module's main behavior and UI/data flow.
+// Imports: external libraries and shared modules used in this file.
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 
 export default function OTPVerify() {
+  // State: tracks local values needed to render and update the screen.
   const [otp, setOtp] = useState(new Array(6).fill(""));
   const [loading, setLoading] = useState(false);
   const [resending, setResending] = useState(false);
@@ -13,6 +16,7 @@ export default function OTPVerify() {
   const email = new URLSearchParams(window.location.search).get("email");
 
   /* ───────── OTP INPUT LOGIC ───────── */
+  // Event handlers: respond to user actions and form submissions.
   const handleChange = (element, index) => {
     if (isNaN(element.value)) return;
     const newOtp = [...otp];
@@ -170,6 +174,7 @@ export default function OTPVerify() {
     }
   };
 
+  // Render: returns the visible UI structure for this component.
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-100 px-4">
       <div className="bg-white shadow-lg rounded-2xl w-full max-w-sm p-6">

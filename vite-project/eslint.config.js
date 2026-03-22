@@ -1,3 +1,5 @@
+// File overview: Implements this module's main behavior and UI/data flow.
+// Imports: external libraries and shared modules used in this file.
 import js from '@eslint/js'
 import globals from 'globals'
 import reactHooks from 'eslint-plugin-react-hooks'

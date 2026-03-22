@@ -1,3 +1,5 @@
+// File overview: Implements this module's main behavior and UI/data flow.
+// Imports: external libraries and shared modules used in this file.
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { toast, ToastContainer } from 'react-toastify';
@@ -5,6 +7,7 @@ import "react-toastify/dist/ReactToastify.css";
 
 function Password() {
 
+  // State: tracks local values needed to render and update the screen.
   const [step, setStep] = useState(1);
   const [email, setEmail] = useState('');
   const [otp, setOtp] = useState('');
@@ -15,10 +18,12 @@ function Password() {
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
+// Configuration: environment values and service clients.
   const API = import.meta.env.VITE_SUPABASE_URL;
   const ANON = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
   // STEP 1 — SEND RESET OTP
+  // Event handlers: respond to user actions and form submissions.
   const handleEmailSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
@@ -88,6 +93,7 @@ function Password() {
   };
 
   // PASSWORD STRENGTH CHECK
+  // Helpers: reusable utility logic used by this module.
   const validatePassword = (pwd) => {
     const regex =
       /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?]).{8,}$/;
@@ -148,6 +154,7 @@ function Password() {
     switch (step) {
 
       case 1:
+  // Render: returns the visible UI structure for this component.
         return (
           <form onSubmit={handleEmailSubmit} className="space-y-5">
             <div>

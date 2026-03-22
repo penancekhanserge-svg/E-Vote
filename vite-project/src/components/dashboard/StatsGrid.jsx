@@ -1,8 +1,11 @@
+// File overview: Implements this module's main behavior and UI/data flow.
+// Imports: external libraries and shared modules used in this file.
 import { useEffect, useState } from "react";
 import { UserCheck, Users, CalendarDays, CheckCircle } from "lucide-react";
 import { supabase } from "../../supabaseClient";
 
 function StatsGrid() {
+  // State: tracks local values needed to render and update the screen.
   const [stats, setStats] = useState({
     voters: 0,
     candidates: 0,
@@ -12,11 +15,13 @@ function StatsGrid() {
 
   const [loading, setLoading] = useState(true);
 
+  // Effects: run startup logic and react to dependency changes.
   useEffect(() => {
     fetchStats();
   }, []);
 
   /* ───────────── FETCH ALL STATS ───────────── */
+  // Data loading: retrieves records from APIs or the database.
   const fetchStats = async () => {
     setLoading(true);
 
@@ -79,6 +84,7 @@ function StatsGrid() {
     </div>
   );
 
+  // Render: returns the visible UI structure for this component.
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
       <StatCard

@@ -1,3 +1,5 @@
+// File overview: Implements this module's main behavior and UI/data flow.
+// Imports: external libraries and shared modules used in this file.
 import React, { useState, useEffect } from "react";
 import {
   User,
@@ -17,6 +19,7 @@ import "react-toastify/dist/ReactToastify.css";
 
 export default function CandidateSummaryPage() {
   /* ================= STATE ================= */
+  // State: tracks local values needed to render and update the screen.
   const [candidates, setCandidates] = useState([]);
   const [elections, setElections] = useState([]);
 
@@ -47,6 +50,7 @@ export default function CandidateSummaryPage() {
   });
 
   /* ================= ENV / EDGE FUNCTION ================= */
+// Configuration: environment values and service clients.
   const API = import.meta.env.VITE_SUPABASE_URL;
   const ANON = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
@@ -65,12 +69,14 @@ export default function CandidateSummaryPage() {
   ];
 
   /* ================= FETCH DATA ================= */
+  // Effects: run startup logic and react to dependency changes.
   useEffect(() => {
     fetchCandidates();
     fetchElections();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Data loading: retrieves records from APIs or the database.
   const fetchElections = async () => {
     const { data, error } = await supabase
       .from("elections")
@@ -114,6 +120,7 @@ export default function CandidateSummaryPage() {
   };
 
   /* ================= IMAGE COMPRESSION ================= */
+  // Helpers: reusable utility logic used by this module.
   const compressImage = (file) => {
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
@@ -184,6 +191,7 @@ export default function CandidateSummaryPage() {
     setErrorMsg("");
   };
 
+  // Event handlers: respond to user actions and form submissions.
   const handleImageUpload = async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -416,6 +424,7 @@ export default function CandidateSummaryPage() {
   );
 
   /* ================= UI ================= */
+  // Render: returns the visible UI structure for this component.
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-6 sm:pb-10">
       <ToastContainer position="top-right" autoClose={3000} />

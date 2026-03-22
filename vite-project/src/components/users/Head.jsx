@@ -1,3 +1,5 @@
+// File overview: Implements this module's main behavior and UI/data flow.
+// Imports: external libraries and shared modules used in this file.
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
@@ -9,11 +11,13 @@ import {
 
 const HeaderSection = () => {
   const navigate = useNavigate();
+  // State: tracks local values needed to render and update the screen.
   const [showProfileMenu, setShowProfileMenu] = useState(false);
 
   // GET USER NAME FROM SESSION
   const userName = localStorage.getItem("userName") || "Voter";
 
+  // Event handlers: respond to user actions and form submissions.
   const handleSettingsClick = () => {
     navigate("/user-dashboard/user-settings");
   };
@@ -23,6 +27,7 @@ const HeaderSection = () => {
     navigate("/auth/login");
   };
 
+  // Render: returns the visible UI structure for this component.
   return (
     <header className="bg-white shadow px-4 sm:px-6 py-4">
       <div className="flex justify-between items-center">

@@ -1,3 +1,5 @@
+// File overview: Implements this module's main behavior and UI/data flow.
+// Imports: external libraries and shared modules used in this file.
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import {
@@ -11,6 +13,7 @@ import { supabase } from "../../supabaseClient";
 
 const HeaderSection = ({ onToggleSidebar }) => {
   const navigate = useNavigate();
+  // State: tracks local values needed to render and update the screen.
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const [profilePhoto, setProfilePhoto] = useState(null);
 
@@ -20,10 +23,12 @@ const HeaderSection = ({ onToggleSidebar }) => {
 
   /* ================= FETCH PROFILE PHOTO ================= */
 
+  // Effects: run startup logic and react to dependency changes.
   useEffect(() => {
     fetchProfilePhoto();
   }, []);
 
+  // Data loading: retrieves records from APIs or the database.
   const fetchProfilePhoto = async () => {
     if (!userId) return;
 
@@ -40,6 +45,7 @@ const HeaderSection = ({ onToggleSidebar }) => {
 
   /* ================= HANDLERS ================= */
 
+  // Event handlers: respond to user actions and form submissions.
   const handleSettingsClick = () => {
     navigate("/candidate-dashboard/settings");
   };
@@ -55,6 +61,7 @@ const HeaderSection = ({ onToggleSidebar }) => {
 
   /* ================= UI ================= */
 
+  // Render: returns the visible UI structure for this component.
   return (
     <header className="bg-white shadow px-4 sm:px-6 py-4">
       <div className="flex justify-between items-center">

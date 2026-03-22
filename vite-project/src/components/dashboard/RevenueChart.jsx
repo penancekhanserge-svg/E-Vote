@@ -1,3 +1,5 @@
+// File overview: Implements this module's main behavior and UI/data flow.
+// Imports: external libraries and shared modules used in this file.
 import React, { useEffect, useState } from "react";
 import {
   BarChart,
@@ -12,6 +14,7 @@ import { BarChart2, ChevronDown } from "lucide-react";
 import { supabase } from "../../supabaseClient";
 
 export default function RevenueChart() {
+  // State: tracks local values needed to render and update the screen.
   const [elections, setElections] = useState([]);
   const [selectedElection, setSelectedElection] = useState(null);
   const [chartData, setChartData] = useState([]);
@@ -20,10 +23,12 @@ export default function RevenueChart() {
   const [errorMsg, setErrorMsg] = useState("");
 
   /* ───────────── FETCH ACTIVE ELECTIONS (WITH JOIN) ───────────── */
+  // Effects: run startup logic and react to dependency changes.
   useEffect(() => {
     fetchActiveElections();
   }, []);
 
+  // Data loading: retrieves records from APIs or the database.
   const fetchActiveElections = async () => {
     setErrorMsg("");
 
@@ -43,6 +48,7 @@ export default function RevenueChart() {
       return;
     }
 
+  // Helpers: reusable utility logic used by this module.
     const formattedElections = (data || []).map((row) => ({
       id: row.id,
       election_type_id: row.election_type_id,
@@ -87,6 +93,7 @@ export default function RevenueChart() {
     setLoading(false);
   };
 
+  // Render: returns the visible UI structure for this component.
   return (
     <div className="w-full h-full flex flex-col p-4">
       {/* Main Card: Removed hard border, added soft shadow and rounded corners */}

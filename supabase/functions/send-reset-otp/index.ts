@@ -1,5 +1,8 @@
+// File overview: Implements this module's main behavior and UI/data flow.
+// Imports: external libraries and shared modules used in this file.
 import { createClient } from "jsr:@supabase/supabase-js@2";
 
+// Configuration: environment values and service clients.
 const supabase = createClient(
   Deno.env.get("SUPABASE_URL")!,
   Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
@@ -27,6 +30,7 @@ async function hashOTP(otp: string) {
     .join("");
 }
 
+// Request handling: receives HTTP calls and returns API responses.
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { status: 204, headers: cors() });

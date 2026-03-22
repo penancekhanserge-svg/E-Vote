@@ -1,3 +1,5 @@
+// File overview: Implements this module's main behavior and UI/data flow.
+// Imports: external libraries and shared modules used in this file.
 import React, { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import bcrypt from "bcryptjs";
@@ -8,6 +10,7 @@ import { supabase } from "../../supabaseClient"; // Ensure you have your client 
 function Register() {
   const MAX_OCR_IMAGE_BYTES = 1024 * 1024; // OCR.Space free tier friendly limit
   const navigate = useNavigate();
+  // State: tracks local values needed to render and update the screen.
   const [formData, setFormData] = useState({
     full_name: "",
     email: "",
@@ -31,6 +34,7 @@ function Register() {
   const [loadingDepartments, setLoadingDepartments] = useState(false);
 
   // Fetch regions on mount
+  // Effects: run startup logic and react to dependency changes.
   useEffect(() => {
     const role = localStorage.getItem("userRole");
     if (role === "admin") {
@@ -49,6 +53,7 @@ function Register() {
     fetchRegions();
   }, [navigate]);
 
+  // Data loading: retrieves records from APIs or the database.
   const fetchRegions = async () => {
     setLoadingRegions(true);
     const { data, error } = await supabase
@@ -89,6 +94,7 @@ function Register() {
     setDepartments(data || []);
   };
 
+  // Event handlers: respond to user actions and form submissions.
   const handleChange = (e) => {
     const { name, value } = e.target;
 
@@ -133,6 +139,7 @@ function Register() {
       reader.readAsDataURL(file);
     });
 
+  // Helpers: reusable utility logic used by this module.
   const validateForm = () => {
     const newErrors = {};
     const passwordRegex =
@@ -306,6 +313,7 @@ function Register() {
     }
   };
 
+  // Render: returns the visible UI structure for this component.
   return (
     <div className="min-h-screen bg-slate-100 dark:bg-slate-900 flex justify-center px-4 py-4 sm:py-6 lg:py-8">
       <div className="w-full max-w-6xl bg-white dark:bg-slate-800 shadow-lg rounded-2xl overflow-hidden grid grid-cols-1 lg:grid-cols-2">

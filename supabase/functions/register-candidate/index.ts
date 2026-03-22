@@ -1,10 +1,13 @@
+// File overview: Implements this module's main behavior and UI/data flow.
 // supabase/functions/register-candidate/index.ts
 // Edge Function: Register Candidate -> Send Email -> Insert Candidate
 // Uses: SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, RESEND_API_KEY, APP_URL (optional)
 
+// Imports: external libraries and shared modules used in this file.
 import { createClient } from "jsr:@supabase/supabase-js@2";
 import { hash } from "https://deno.land/x/bcrypt@v0.4.1/mod.ts";
 
+// Configuration: environment values and service clients.
 const supabase = createClient(
   Deno.env.get("SUPABASE_URL")!,
   Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
@@ -14,6 +17,7 @@ const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY")!;
 const APP_URL = Deno.env.get("APP_URL") || "http://localhost:5173";
 const FROM_EMAIL = "VoteSecure <no-reply@ballotium.app>";
 
+  // Helpers: reusable utility logic used by this module.
 function corsHeaders() {
   return {
     "Access-Control-Allow-Origin": "*",
@@ -183,6 +187,7 @@ async function sendResendEmail(
   }
 }
 
+// Request handling: receives HTTP calls and returns API responses.
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { status: 204, headers: corsHeaders() });

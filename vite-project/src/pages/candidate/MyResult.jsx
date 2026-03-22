@@ -1,18 +1,23 @@
+// File overview: Implements this module's main behavior and UI/data flow.
+// Imports: external libraries and shared modules used in this file.
 import React, { useState, useEffect, useMemo } from "react";
 import { supabase } from "../../supabaseClient";
 
 function MyResult() {
+  // State: tracks local values needed to render and update the screen.
   const [resultsPublished, setResultsPublished] = useState(false);
   const [results, setResults] = useState([]);
   const [electionName, setElectionName] = useState("");
   const [loading, setLoading] = useState(true);
   const [myId, setMyId] = useState(null);
 
+  // Effects: run startup logic and react to dependency changes.
   useEffect(() => {
     fetchMyResult();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Data loading: retrieves records from APIs or the database.
   const fetchMyResult = async () => {
     try {
       setLoading(true);
@@ -78,6 +83,7 @@ function MyResult() {
         0
       );
 
+  // Helpers: reusable utility logic used by this module.
       const formatted = allResults.map((r, index) => ({
         ...r,
         rank: index + 1,
@@ -118,6 +124,7 @@ function MyResult() {
   };
 
   if (loading) {
+  // Render: returns the visible UI structure for this component.
     return (
       <div className="min-h-screen flex items-center justify-center p-6">
         <div className="w-full max-w-md bg-white/80 backdrop-blur border border-white rounded-2xl shadow-xl p-6">

@@ -1,7 +1,10 @@
+// File overview: Implements this module's main behavior and UI/data flow.
+// Imports: external libraries and shared modules used in this file.
 import React, { useEffect, useState } from "react";
 import { supabase } from "../supabaseClient";
 
 function Settings() {
+  // State: tracks local values needed to render and update the screen.
   const [profile, setProfile] = useState({
     id: "",          // ✅ UUID loaded dynamically
     name: "",
@@ -14,7 +17,9 @@ function Settings() {
   const [success, setSuccess] = useState("");
 
   /* ───────── LOAD ADMIN PROFILE ───────── */
+  // Effects: run startup logic and react to dependency changes.
   useEffect(() => {
+  // Data loading: retrieves records from APIs or the database.
     const loadAdminProfile = async () => {
       const adminId = localStorage.getItem("admin_id");
 
@@ -47,6 +52,7 @@ function Settings() {
   }, []);
 
   /* ───────── INPUT HANDLERS ───────── */
+  // Event handlers: respond to user actions and form submissions.
   const handleProfileChange = (e) => {
     const { name, value } = e.target;
     setProfile((prev) => ({ ...prev, [name]: value }));
@@ -104,6 +110,7 @@ function Settings() {
     }
   };
 
+  // Render: returns the visible UI structure for this component.
   return (
     <div className="max-w-4xl mx-auto px-6 py-10">
       {/* Header */}

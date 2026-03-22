@@ -1,3 +1,5 @@
+// File overview: Implements this module's main behavior and UI/data flow.
+// Imports: external libraries and shared modules used in this file.
 import { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import bcrypt from "bcryptjs";
@@ -6,6 +8,7 @@ import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 
 export default function LoginPage() {
+  // State: tracks local values needed to render and update the screen.
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -14,6 +17,7 @@ export default function LoginPage() {
   const navigate = useNavigate();
 
   // ✅ PROTECT LOGIN PAGE (prevents going back to login)
+  // Effects: run startup logic and react to dependency changes.
   useEffect(() => {
     const role = localStorage.getItem("userRole");
 
@@ -22,6 +26,7 @@ export default function LoginPage() {
     if (role === "voter") navigate("/user-dashboard", { replace: true });
   }, []);
 
+  // Event handlers: respond to user actions and form submissions.
   const handleSubmit = async (e) => {
     e.preventDefault();
 
@@ -30,6 +35,7 @@ export default function LoginPage() {
       return;
     }
 
+  // Helpers: reusable utility logic used by this module.
     const normalizedEmail = email.trim().toLowerCase();
     setLoading(true);
 
@@ -118,6 +124,7 @@ export default function LoginPage() {
     }
   };
 
+  // Render: returns the visible UI structure for this component.
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-100 px-4">
       <div className="max-w-md w-full bg-white rounded-xl shadow-xl p-8 space-y-6">

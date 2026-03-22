@@ -1,3 +1,5 @@
+// File overview: Implements this module's main behavior and UI/data flow.
+// Imports: external libraries and shared modules used in this file.
 import {
   ChevronDown,
   Settings as SettingsIcon,
@@ -14,16 +16,20 @@ function Header({ theme, onToggleTheme }) {
   const userName = localStorage.getItem("userName");
 
   // PROFILE MENU
+  // State: tracks local values needed to render and update the screen.
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const profileRef = useRef(null);
 
+  // Effects: run startup logic and react to dependency changes.
   useEffect(() => {
+  // Event handlers: respond to user actions and form submissions.
     const handleClickOutside = (e) => {
       if (profileRef.current && !profileRef.current.contains(e.target)) {
         setShowProfileMenu(false);
       }
     };
     document.addEventListener("mousedown", handleClickOutside);
+  // Render: returns the visible UI structure for this component.
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 

@@ -1,3 +1,5 @@
+// File overview: Implements this module's main behavior and UI/data flow.
+// Imports: external libraries and shared modules used in this file.
 import React, { useState, useEffect } from "react";
 import {
   Users,
@@ -14,6 +16,7 @@ import { supabase } from "../supabaseClient";
 const mockVotersInit = [];
 
 function Voters() {
+  // State: tracks local values needed to render and update the screen.
   const [searchTerm, setSearchTerm] = useState("");
   const [mockVoters, setMockVoters] = useState(mockVotersInit);
 
@@ -33,6 +36,7 @@ function Voters() {
   });
 
   /* ================= FETCH VOTERS ================= */
+  // Effects: run startup logic and react to dependency changes.
   useEffect(() => {
     fetchVoters();
 
@@ -41,12 +45,14 @@ function Voters() {
       fetchVoters(true); // silent refresh
     }, 10000);
 
+  // Render: returns the visible UI structure for this component.
     return () => clearInterval(interval);
   }, []);
 
   /**
    * Computes status from votes table (source of truth) and optionally syncs has_voted.
    */
+  // Data loading: retrieves records from APIs or the database.
   const fetchVoters = async (silent = false) => {
     const { data: votersData, error: votersErr } = await supabase
       .from("voters")
@@ -77,6 +83,7 @@ function Voters() {
 
     const votedSet = new Set((votesData || []).map((x) => x.voter_id));
 
+  // Helpers: reusable utility logic used by this module.
     const mapped = (votersData || []).map((v) => {
       const votedByVotesTable = votedSet.has(v.id);
       const voted = Boolean(v.has_voted) || votedByVotesTable;
@@ -125,6 +132,7 @@ function Voters() {
   const voted = mockVoters.filter((v) => v.status === "Voted").length;
   const notVoted = total - voted;
 
+  // Event handlers: respond to user actions and form submissions.
   const handleFormChange = (e) =>
     setFormData({ ...formData, [e.target.name]: e.target.value });
 

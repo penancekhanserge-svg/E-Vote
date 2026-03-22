@@ -1,3 +1,5 @@
+// File overview: Implements this module's main behavior and UI/data flow.
+// Imports: external libraries and shared modules used in this file.
 import React, { useEffect, useMemo, useState } from "react";
 import { UploadCloud, Printer, ChevronDown } from "lucide-react";
 import { supabase } from "../supabaseClient";
@@ -15,6 +17,7 @@ import "react-toastify/dist/ReactToastify.css";
  */
 
 export default function ResultsPage() {
+  // State: tracks local values needed to render and update the screen.
   const [elections, setElections] = useState([]);
   const [resultsMap, setResultsMap] = useState({}); // candidate totals per election (from view)
   const [regionMap, setRegionMap] = useState({}); // region/department totals per election (computed)
@@ -23,11 +26,13 @@ export default function ResultsPage() {
   const [openRegionForElection, setOpenRegionForElection] = useState({}); // electionId -> boolean/expanded
 
   /* ───────────── FETCH COMPLETED ELECTIONS ───────────── */
+  // Effects: run startup logic and react to dependency changes.
   useEffect(() => {
     fetchCompletedElections();
     // eslint-disable-next-line
   }, []);
 
+  // Data loading: retrieves records from APIs or the database.
   const fetchCompletedElections = async () => {
     setLoading(true);
 
@@ -50,6 +55,7 @@ export default function ResultsPage() {
       return;
     }
 
+  // Helpers: reusable utility logic used by this module.
     const formatted = (data || []).map((e) => ({
       id: e.id,
       name: e.election_types?.name || "Unnamed Election",
@@ -169,6 +175,7 @@ export default function ResultsPage() {
   };
 
   /* ───────────── PUBLISH RESULTS ───────────── */
+  // Event handlers: respond to user actions and form submissions.
   const handlePublish = async (electionId) => {
     setPublishingId(electionId);
 
@@ -200,6 +207,7 @@ export default function ResultsPage() {
   };
 
   /* ───────────── UI ───────────── */
+  // Render: returns the visible UI structure for this component.
   return (
     <div className="min-h-screen bg-gray-50">
       {/* MAIN HEADER & CONTROLS (Hidden in Print) */}

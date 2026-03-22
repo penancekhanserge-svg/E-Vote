@@ -1,18 +1,23 @@
+// File overview: Implements this module's main behavior and UI/data flow.
+// Imports: external libraries and shared modules used in this file.
 import React, { useEffect, useState } from "react";
 import { Mail, MapPin, Users } from "lucide-react";
 import { supabase } from "../../supabaseClient";
 
 function Profile({ candidateId }) {
+  // State: tracks local values needed to render and update the screen.
   const [candidate, setCandidate] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
   /* ================= FETCH FROM SUPABASE ================= */
 
+  // Effects: run startup logic and react to dependency changes.
   useEffect(() => {
     fetchProfile();
   }, [candidateId]);
 
+  // Data loading: retrieves records from APIs or the database.
   const fetchProfile = async () => {
     try {
       setLoading(true);
@@ -64,6 +69,7 @@ function Profile({ candidateId }) {
   /* ================= STATES ================= */
 
   if (loading) {
+  // Render: returns the visible UI structure for this component.
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-gray-500 animate-pulse">

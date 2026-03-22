@@ -1,3 +1,5 @@
+// File overview: Implements this module's main behavior and UI/data flow.
+// Imports: external libraries and shared modules used in this file.
 import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import {
@@ -12,18 +14,22 @@ import {
 } from "lucide-react";
 
 function Sidebar({ currentPage }) {
+  // State: tracks local values needed to render and update the screen.
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
   const adminName = localStorage.getItem("userName");
 
   // Auto collapse on small screens
+  // Effects: run startup logic and react to dependency changes.
   useEffect(() => {
+  // Event handlers: respond to user actions and form submissions.
     const handleResize = () => {
       setSidebarCollapsed(window.innerWidth < 1024);
     };
 
     handleResize();
     window.addEventListener("resize", handleResize);
+  // Render: returns the visible UI structure for this component.
     return () => window.removeEventListener("resize", handleResize);
   }, []);
 

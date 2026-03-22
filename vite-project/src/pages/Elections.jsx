@@ -1,3 +1,5 @@
+// File overview: Implements this module's main behavior and UI/data flow.
+// Imports: external libraries and shared modules used in this file.
 import React, { useState, useEffect } from "react";
 import {
   CalendarDays,
@@ -12,6 +14,7 @@ import {
 import { supabase } from "../supabaseClient";
 
 export default function ElectionsPage() {
+  // State: tracks local values needed to render and update the screen.
   const [isModalOpen, setModalOpen] = useState(false);
   const [editMode, setEditMode] = useState(false);
   const [editingIndex, setEditingIndex] = useState(null);
@@ -30,12 +33,14 @@ export default function ElectionsPage() {
   const [electionToDelete, setElectionToDelete] = useState(null);
   const [isDeleting, setIsDeleting] = useState(false);
 
+  // Effects: run startup logic and react to dependency changes.
   useEffect(() => {
     fetchElections();
     fetchAvailableElectionTypes();
   }, []);
 
   /* ───────────── FETCH ELECTIONS ───────────── */
+  // Data loading: retrieves records from APIs or the database.
   const fetchElections = async () => {
     const { data, error } = await supabase
       .from("elections")
@@ -154,6 +159,7 @@ export default function ElectionsPage() {
     setModalOpen(true);
   };
 
+  // Event handlers: respond to user actions and form submissions.
   const handleInputChange = (e) => {
     setFormData((p) => ({ ...p, [e.target.name]: e.target.value }));
   };
@@ -256,6 +262,7 @@ export default function ElectionsPage() {
       ? "Locked: votes exist"
       : "Locked: candidates exist";
 
+  // Render: returns the visible UI structure for this component.
   return (
     <div className="max-w-7xl mx-auto space-y-6 sm:space-y-8 pb-10 px-4 sm:px-6">
       <h1 className="text-2xl sm:text-3xl font-bold text-gray-800 dark:text-white">

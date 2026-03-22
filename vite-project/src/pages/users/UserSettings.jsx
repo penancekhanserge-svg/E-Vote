@@ -1,3 +1,5 @@
+// File overview: Implements this module's main behavior and UI/data flow.
+// Imports: external libraries and shared modules used in this file.
 import React, { useEffect, useState } from "react";
 import { Save, User } from "lucide-react";
 import { supabase } from "../../supabaseClient";
@@ -7,6 +9,7 @@ import "react-toastify/dist/ReactToastify.css";
 function SettingsPage() {
   const voterId = localStorage.getItem("voterId");
 
+  // State: tracks local values needed to render and update the screen.
   const [formData, setFormData] = useState({
     fullName: "",
     email: "",
@@ -16,7 +19,9 @@ function SettingsPage() {
   const [isSaving, setIsSaving] = useState(false);
 
   /* ───────── LOAD VOTER PROFILE ───────── */
+  // Effects: run startup logic and react to dependency changes.
   useEffect(() => {
+  // Data loading: retrieves records from APIs or the database.
     const loadProfile = async () => {
       if (!voterId) {
         toast.error("Your session may be inactive. Changes cannot be saved.");
@@ -48,6 +53,7 @@ function SettingsPage() {
   }, [voterId]);
 
   /* ───────── SAVE PROFILE ───────── */
+  // Event handlers: respond to user actions and form submissions.
   const handleSave = async () => {
     if (!voterId) {
       toast.error("Session missing. Please log in again to save changes.");
@@ -96,6 +102,7 @@ function SettingsPage() {
   }
 
   /* ───────── UI ───────── */
+  // Render: returns the visible UI structure for this component.
   return (
     <div className="min-h-screen">
       <div className="max-w-2xl mx-auto px-4 py-8">

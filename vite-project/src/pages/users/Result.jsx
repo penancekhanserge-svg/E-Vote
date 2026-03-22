@@ -1,16 +1,21 @@
+// File overview: Implements this module's main behavior and UI/data flow.
+// Imports: external libraries and shared modules used in this file.
 import React, { useEffect, useState } from "react";
 import { supabase } from "../../supabaseClient";
 import { BarChart3, Clock, FileText, Trophy, RefreshCw, Award } from "lucide-react";
 
 function MyResult() {
+  // State: tracks local values needed to render and update the screen.
   const [loading, setLoading] = useState(true);
   const [publishedElections, setPublishedElections] = useState([]);
   const [resultsMap, setResultsMap] = useState({});
 
+  // Effects: run startup logic and react to dependency changes.
   useEffect(() => {
     fetchPublishedResults();
   }, []);
 
+  // Data loading: retrieves records from APIs or the database.
   const fetchPublishedResults = async () => {
     setLoading(true);
 
@@ -62,6 +67,7 @@ function MyResult() {
 
   /* ───────────── LOADING STATE ───────────── */
   if (loading) {
+  // Render: returns the visible UI structure for this component.
     return (
       <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex items-center justify-center p-4">
         <div className="text-center">

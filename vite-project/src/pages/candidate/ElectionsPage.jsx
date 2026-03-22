@@ -1,11 +1,15 @@
+// File overview: Implements this module's main behavior and UI/data flow.
+// Imports: external libraries and shared modules used in this file.
 import React, { useEffect, useState } from "react"; // React hooks
 import { supabase } from "../../supabaseClient"; // Supabase client
 
 const ElectionsPage = () => {
+  // State: tracks local values needed to render and update the screen.
   const [loading, setLoading] = useState(true); // Loading state
   const [myId, setMyId] = useState(""); // Logged in candidate/user id
   const [election, setElection] = useState(null); // Single election object
 
+  // Effects: run startup logic and react to dependency changes.
   useEffect(() => {
     load(); // Fetch data on mount
   }, []);
@@ -63,6 +67,7 @@ const ElectionsPage = () => {
   };
 
   if (loading) {
+  // Render: returns the visible UI structure for this component.
     return (
       <div className="min-h-screen flex items-center justify-center bg-slate-50">
         <div className="h-8 w-8 animate-spin rounded-full border-2 border-indigo-600 border-t-transparent"></div>
@@ -79,6 +84,7 @@ const ElectionsPage = () => {
   }
 
   // Helper to get initials for avatar
+  // Data loading: retrieves records from APIs or the database.
   const getInitials = (name) => {
     if (!name) return "?";
     return name

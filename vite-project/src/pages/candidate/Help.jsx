@@ -1,9 +1,12 @@
+// File overview: Implements this module's main behavior and UI/data flow.
+// Imports: external libraries and shared modules used in this file.
 import React, { useState } from 'react';
 import emailjs from "emailjs-com";
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 
 function Support() {
+  // State: tracks local values needed to render and update the screen.
   const [activeIndex, setActiveIndex] = useState(null);
   const [loading, setLoading] = useState(false);
 
@@ -53,6 +56,7 @@ function Support() {
     setActiveIndex(index === activeIndex ? null : index);
   };
 
+  // Event handlers: respond to user actions and form submissions.
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
@@ -90,6 +94,7 @@ function Support() {
     });
   };
 
+  // Render: returns the visible UI structure for this component.
   return (
     <div className="max-w-6xl mx-auto">
       {/* Header */}

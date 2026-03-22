@@ -1,8 +1,11 @@
+// File overview: Implements this module's main behavior and UI/data flow.
 // Import Supabase client library for Deno runtime
+// Imports: external libraries and shared modules used in this file.
 import { createClient } from "jsr:@supabase/supabase-js@2";
 
 // Create Supabase admin client using environment variables
 // SERVICE ROLE KEY is used because this function needs DB write access
+// Configuration: environment values and service clients.
 const supabase = createClient(
   Deno.env.get("SUPABASE_URL")!,              // Supabase project URL
   Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!  // Admin/service key (server-side only)
@@ -42,6 +45,7 @@ async function hashOTP(otp: string) {
 
 // EDGE FUNCTION ENTRY POINT
 // Handles incoming HTTP requests
+// Request handling: receives HTTP calls and returns API responses.
 Deno.serve(async (req) => {
 
   // Handle browser CORS preflight request

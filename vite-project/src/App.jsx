@@ -1,3 +1,5 @@
+// File overview: Implements this module's main behavior and UI/data flow.
+// Imports: external libraries and shared modules used in this file.
 import React, { useEffect, useState } from "react";
 import {
   BrowserRouter,
@@ -47,11 +49,13 @@ import Password from "./pages/auth/Password";
 /* ========================================================= */
 
 function AdminLayout() {
+  // State: tracks local values needed to render and update the screen.
   const [sideBarCollapsed, setSideBarCollapsed] = useState(false);
   const [theme, setTheme] = useState("light");
   const location = useLocation();
   const navigate = useNavigate();
 
+  // Effects: run startup logic and react to dependency changes.
   useEffect(() => {
     const storedTheme = localStorage.getItem("theme");
     const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
@@ -75,6 +79,7 @@ function AdminLayout() {
     setTheme((prev) => (prev === "dark" ? "light" : "dark"));
   };
 
+  // Render: returns the visible UI structure for this component.
   return (
     <div className="h-screen flex overflow-hidden bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 dark:from-slate-950 dark:via-slate-900 dark:to-slate-800">
       <Sidebar
