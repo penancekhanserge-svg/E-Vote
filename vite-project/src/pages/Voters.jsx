@@ -12,6 +12,8 @@ import {
   ChevronRight,
 } from "lucide-react";
 import { supabase } from "../supabaseClient";
+import { toast, ToastContainer } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 
 const mockVotersInit = [];
 
@@ -59,7 +61,7 @@ function Voters() {
       .select("id, full_name, email, has_voted");
 
     if (votersErr) {
-      if (!silent) alert(votersErr.message);
+      if (!silent) toast.error(votersErr.message);
       return;
     }
 
@@ -147,7 +149,10 @@ function Voters() {
   };
 
   const saveEditVoter = async () => {
-    if (!formData.name || !formData.email) return alert("Please fill in all fields");
+    if (!formData.name || !formData.email) {
+      toast.error("Please fill in all fields");
+      return;
+    }
 
     try {
       const { error } = await supabase
@@ -160,20 +165,20 @@ function Voters() {
 
       if (error) {
         if (error.code === "23505") {
-          alert("Another voter already uses this email");
+          toast.error("Another voter already uses this email");
         } else {
-          alert(error.message);
+          toast.error(error.message);
         }
         return;
       }
 
-      alert("Voter updated successfully");
+      toast.success("Voter updated successfully");
 
       setShowEditPopup(false);
       setSelectedVoter(null);
       fetchVoters();
     } catch {
-      alert("Failed to update voter");
+      toast.error("Failed to update voter");
     }
   };
 
@@ -185,18 +190,18 @@ function Voters() {
 
   const deleteVoter = async () => {
     if (!selectedVoter?.id) {
-      alert("No voter selected");
+      toast.error("No voter selected");
       return;
     }
 
     const { error } = await supabase.from("voters").delete().eq("id", selectedVoter.id);
 
     if (error) {
-      alert(error.message);
+      toast.error(error.message);
       return;
     }
 
-    alert("Voter deleted successfully");
+    toast.success("Voter deleted successfully");
 
     setShowDeletePopup(false);
     setSelectedVoter(null);
@@ -435,6 +440,8 @@ function Voters() {
           </button>
         </Popup>
       )}
+
+      <ToastContainer position="top-right" autoClose={3000} />
     </div>
   );
 }

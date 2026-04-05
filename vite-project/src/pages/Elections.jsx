@@ -12,6 +12,8 @@ import {
   X,
 } from "lucide-react";
 import { supabase } from "../supabaseClient";
+import { toast, ToastContainer } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 
 export default function ElectionsPage() {
   // State: tracks local values needed to render and update the screen.
@@ -193,7 +195,7 @@ export default function ElectionsPage() {
       setModalOpen(false);
     } catch (err) {
       console.error(err);
-      alert("Failed to save election.");
+      toast.error("Failed to save election.");
     } finally {
       setIsSubmitting(false);
     }
@@ -203,7 +205,7 @@ export default function ElectionsPage() {
     const e = elections[index];
 
     if (!e?.canDelete) {
-      alert(e?.deleteReason || "Cannot delete this election.");
+      toast.warning(e?.deleteReason || "Cannot delete this election.");
       return;
     }
 
@@ -215,7 +217,7 @@ export default function ElectionsPage() {
     const election = elections[electionToDelete];
 
     if (!election?.canDelete) {
-      alert(election?.deleteReason || "Cannot delete this election.");
+      toast.warning(election?.deleteReason || "Cannot delete this election.");
       setDeleteConfirmOpen(false);
       return;
     }
@@ -232,7 +234,7 @@ export default function ElectionsPage() {
       setDeleteConfirmOpen(false);
     } catch (error) {
       console.error("Delete error:", error);
-      alert("Could not delete election. It might have associated candidates or votes.");
+      toast.error("Could not delete election. It might have associated candidates or votes.");
     } finally {
       setIsDeleting(false);
     }
@@ -625,6 +627,8 @@ export default function ElectionsPage() {
           </div>
         </div>
       )}
+
+      <ToastContainer position="top-right" autoClose={3000} />
     </div>
   );
 }
